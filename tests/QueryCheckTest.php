@@ -829,4 +829,311 @@ class QueryCheckTest extends TestCase
 
         return $opEvaluator;
     }
+
+    // $EXPR TESTS
+
+    #[TestDox('$expr with $gt and $add // (field1 + field2) > 10')]
+    public function testExprWithGtAndAdd(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$gt' => [
+                    ['$add' => ['$myInt', '$myFloat']],
+                    200
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr compare two fields // spent > budget')]
+    public function testExprCompareTwoFields(): void
+    {
+        $vars = ['spent' => 450, 'budget' => 400];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$gt' => ['$spent', '$budget']
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $subtract // (price - discount) < 100')]
+    public function testExprWithSubtract(): void
+    {
+        $vars = ['price' => 100, 'discount' => 20];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$lt' => [
+                    ['$subtract' => ['$price', '$discount']],
+                    90
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $multiply // (field1 * field2) >= 35')]
+    public function testExprWithMultiply(): void
+    {
+        $vars = ['field1' => 5, 'field2' => 7];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$gte' => [
+                    ['$multiply' => ['$field1', '$field2']],
+                    35
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $divide // (field1 / field2) == 2')]
+    public function testExprWithDivide(): void
+    {
+        $vars = ['field1' => 10, 'field2' => 5];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [
+                    ['$divide' => ['$field1', '$field2']],
+                    2
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $mod // (field1 % field2) == 2')]
+    public function testExprWithMod(): void
+    {
+        $vars = ['field1' => 17, 'field2' => 5];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [
+                    ['$mod' => ['$field1', '$field2']],
+                    2
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $cond // conditional discount calculation')]
+    public function testExprWithCond(): void
+    {
+        $vars = ['qty' => 150, 'price' => 100];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$lt' => [
+                    [
+                        '$cond' => [
+                            'if' => ['$gte' => ['$qty', 100]],
+                            'then' => ['$multiply' => ['$price', 0.5]],
+                            'else' => ['$multiply' => ['$price', 0.75]]
+                        ]
+                    ],
+                    60
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with complex nested expression')]
+    public function testExprComplexNested(): void
+    {
+        $vars = ['field1' => 5, 'field2' => 7];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [
+                    ['$add' => [
+                        ['$multiply' => ['$field1', 2]],
+                        ['$subtract' => ['$field2', 3]]
+                    ]],
+                    14
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $ne // field1 != field2')]
+    public function testExprWithNe(): void
+    {
+        $vars = ['field1' => 5, 'field2' => 7];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$ne' => ['$field1', '$field2']
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $lte // field1 <= field2')]
+    public function testExprWithLte(): void
+    {
+        $vars = ['field1' => 5, 'field2' => 5];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$lte' => ['$field1', '$field2']
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr returns false when condition not met')]
+    public function testExprReturnsFalse(): void
+    {
+        $vars = ['field1' => 5, 'field2' => 7];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$gt' => [
+                    ['$add' => ['$field1', '$field2']],
+                    20
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($vars));
+    }
+
+    #[TestDox('$expr with operandEvaluator for custom $var resolution')]
+    public function testExprWithOperandEvaluator(): void
+    {
+        $vars = ['price' => 100, 'multiplier' => 2];
+
+        // Use operandEvaluator to resolve custom $var references
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$gt' => [
+                    ['$multiply' => [['$var' => 'price'], ['$var' => 'multiplier']]],
+                    150
+                ]
+            ]
+        ]);
+
+        $varFunc = function ($params, $data) use ($qc) {
+            if (is_array($params) && isset($params['$var'])) {
+                $varName = $params['$var'];
+                return $qc->getVariableValue($varName, $data);
+            }
+            return $params;
+        };
+
+        $qc->setOperandEvaluator($varFunc);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars)); // 100 * 2 = 200 > 150
+    }
+
+    #[TestDox('$expr with $add treats field names without $ as literal strings')]
+    public function testExprFieldWithoutDollarSignTreatedAsLiteral(): void
+    {
+        $vars = ['field1' => 10, 'field2' => 20];
+
+        // Without $ prefix, "field1" is a literal string, not a field reference
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [
+                    ['$add' => ['field1', 5]],  // "field1" is literal string, not $field1
+                    'field15'  // String concatenation doesn't work with $add, but this tests literal handling
+                ]
+            ]
+        ]);
+
+        $qc->setStrictMode(false);
+
+        // This should throw an error because "field1" (string) is not numeric
+        $this->expectException(\Maurice2k\QueryCheck\Exception\SyntaxError::class);
+        $this->expectExceptionMessage('$add operands must be numeric');
+        $qc->test($vars);
+    }
+
+    #[TestDox('$expr with $add using correct $field syntax works')]
+    public function testExprFieldWithDollarSignWorks(): void
+    {
+        $vars = ['field1' => 10, 'field2' => 20];
+
+        // With $ prefix, $field1 is a field reference
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [
+                    ['$add' => ['$field1', '$field2']],  // Correct: $field1 and $field2
+                    30
+                ]
+            ]
+        ]);
+
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars)); // 10 + 20 = 30
+    }
+
+    #[TestDox('$expr combined with regular field queries using $and')]
+    public function testExprWithAnd(): void
+    {
+        $vars = [
+            'category' => 'electronics',
+            'price' => 100,
+            'discount' => 20,
+            'inStock' => true
+        ];
+
+        // Combine regular field query with $expr
+        $qc = new QueryCheck([
+            '$and' => [
+                ['category' => 'electronics'],
+                ['inStock' => true],
+                [
+                    '$expr' => [
+                        '$lt' => [
+                            ['$subtract' => ['$price', '$discount']],
+                            90
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars)); // category matches, inStock=true, and (100-20)=80 < 90
+    }
+
+    #[TestDox('$expr combined with $and returns false when expression fails')]
+    public function testExprWithAndReturnsFalse(): void
+    {
+        $vars = [
+            'category' => 'electronics',
+            'price' => 100,
+            'discount' => 10,
+            'inStock' => true
+        ];
+
+        // Same query but discount is lower, so price-discount won't be < 90
+        $qc = new QueryCheck([
+            '$and' => [
+                ['category' => 'electronics'],
+                ['inStock' => true],
+                [
+                    '$expr' => [
+                        '$lt' => [
+                            ['$subtract' => ['$price', '$discount']],
+                            90
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($vars)); // (100-10)=90 is NOT < 90
+    }
 }

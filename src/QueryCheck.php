@@ -16,8 +16,9 @@ use Maurice2k\QueryCheck\Exception\UnknownVariableException;
 class QueryCheck
 {
     private array $query;
-    private array $booleanOperators;
-    private array $expressionOperators;
+    private array $logicalOperators;
+    private array $queryOperators;
+    private array $aggregationOperators;
     private bool $undefinedEqualsNull = false;
     private bool $strictMode = false;
     private ?\Closure $operandEvaluator = null;
@@ -26,12 +27,13 @@ class QueryCheck
     {
         $this->query = $query;
 
-        $this->booleanOperators = [
+        $this->logicalOperators = [
             '$or' => $this->evalOr(...),
             '$and' => $this->evalAnd(...),
+            '$expr' => $this->evalExpr(...),
         ];
 
-        $this->expressionOperators = [
+        $this->queryOperators = [
             '$eq' => $this->evalEq(...),
             '$ne' => $this->evalNe(...),
             '$gt' => $this->evalGt(...),
@@ -42,6 +44,22 @@ class QueryCheck
             '$regex' => $this->evalRegExp(...),
             '$options' => $this->evalTrue(...),
             '$not' => $this->evalNot(...),
+        ];
+
+        // these can be used within $expr
+        $this->aggregationOperators = [
+            '$add' => $this->evalAggAdd(...),
+            '$subtract' => $this->evalAggSubtract(...),
+            '$multiply' => $this->evalAggMultiply(...),
+            '$divide' => $this->evalAggDivide(...),
+            '$mod' => $this->evalAggMod(...),
+            '$eq' => $this->evalAggEq(...),
+            '$ne' => $this->evalAggNe(...),
+            '$gt' => $this->evalAggGt(...),
+            '$gte' => $this->evalAggGte(...),
+            '$lt' => $this->evalAggLt(...),
+            '$lte' => $this->evalAggLte(...),
+            '$cond' => $this->evalAggCond(...),
         ];
     }
 
@@ -80,7 +98,18 @@ class QueryCheck
 
         $keys = array_keys($query);
         if (count($keys) > 1) {
-            // implicit $and structure; re-format
+            // we assume an implicit $and structure, e.g.
+            // {
+            //   "age": 37,
+            //   "name": "John"
+            // }
+            // which is equivalent to:
+            // {
+            //   "$and": [
+            //     {"age": 37},
+            //     {"name": "John"}
+            //   ]
+            // }
             $andQuery = [];
             foreach ($keys as $k) {
                 $partial = [];
@@ -97,23 +126,23 @@ class QueryCheck
         }
 
         // we have exactly one key
-        $key = $keys[0];
-        $value = $query[$key];
+        $firstKey = $keys[0];
+        $value = $query[$firstKey];
 
-        if ($key === '') {
+        if ($firstKey === '') {
             throw new SyntaxError('Empty keys are not supported!');
         }
 
-        if ($key[0] === '$') {
+        if ($firstKey[0] === '$') {
             // "key" must be a boolean operator like $and/$or, "value" the
             // sub queries to parse and evaluate
-            $booleanParser = $this->booleanOperators[$key] ?? null;
+            $booleanOperator = $this->logicalOperators[$firstKey] ?? null;
 
-            if (!is_callable($booleanParser)) {
-                throw new SyntaxError("Unsupported boolean operator: {$key}");
+            if (!is_callable($booleanOperator)) {
+                throw new SyntaxError("Unsupported boolean operator: {$firstKey}");
             }
 
-            return $booleanParser($value, $data);
+            return $booleanOperator($value, $data);
         } else {
             // "key" is a variable name; "value" the expression (or a set of
             // expressions) to parse and evaluate.
@@ -127,12 +156,12 @@ class QueryCheck
             // {age: {$gt: 30, $lt: 40}}
             //                == {$and: [{age: {$gt: 30}}, {age: {$lt: 40}}]}
 
-            $variableValue = $this->getVariableValue($key, $data);
-            return $this->evalExpression($key, $variableValue, $value, $data);
+            $variableValue = $this->getVariableValue($firstKey, $data);
+            return $this->evalQueryExpression($firstKey, $variableValue, $value, $data);
         }
     }
 
-    private function evalExpression(string $variableName, mixed $variableValue, mixed $expression, array $data): bool
+    private function evalQueryExpression(string $variableName, mixed $variableValue, mixed $expression, array $data): bool
     {
         if (is_array($expression) && array_is_list($expression) || $expression === null || !is_array($expression)) {
             // expression is of type array, null, number, string, bool; wrap it
@@ -141,7 +170,7 @@ class QueryCheck
             // expression is an object, let's check if it's some kind of supported {$operator: operand} object
             // and wrap it otherwise
             $keys = array_keys($expression);
-            if (count($keys) === 0 || !isset($this->expressionOperators[$keys[0]])) {
+            if (count($keys) === 0 || !isset($this->queryOperators[$keys[0]])) {
                 $expression = ['$eq' => $expression];
             }
         } else {
@@ -156,13 +185,13 @@ class QueryCheck
                 $operand = ($this->operandEvaluator)($operand, $data);
             }
 
-            $expressionParser = $this->expressionOperators[$operator] ?? null;
+            $queryOperator = $this->queryOperators[$operator] ?? null;
 
-            if (!is_callable($expressionParser)) {
-                throw new SyntaxError("Unsupported expression operator: {$operator}");
+            if (!is_callable($queryOperator)) {
+                throw new SyntaxError("Unsupported query operator: {$operator}");
             }
 
-            $result = $expressionParser($variableName, $variableValue, $operand, $expression) && $result;
+            $result = $queryOperator($variableName, $variableValue, $operand, $expression) && $result;
         }
         return $result;
     }
@@ -355,7 +384,7 @@ class QueryCheck
 
     private function evalNot(string $variableName, mixed $variableValue, mixed $operand, mixed $expression = null): bool
     {
-        return !$this->evalExpression($variableName, $variableValue, $operand, []);
+        return !$this->evalQueryExpression($variableName, $variableValue, $operand, []);
     }
 
     private function isEqual(mixed $a, mixed $b): bool
@@ -411,5 +440,222 @@ class QueryCheck
             }
         }
         return true;
+    }
+
+    private function evalExpr(mixed $expression, array $data): bool
+    {
+        if (!is_array($expression) || array_is_list($expression)) {
+            throw new SyntaxError('$expr requires an object expression');
+        }
+
+        $result = $this->evalAggExpression($expression, $data);
+
+        // Convert result to boolean
+        return (bool)$result;
+    }
+
+    private function evalAggExpression(mixed $expression, array $data): mixed
+    {
+        // Allow operandEvaluator to transform expressions first
+        if ($this->operandEvaluator !== null) {
+            $transformedExpression = ($this->operandEvaluator)($expression, $data);
+            // If the evaluator returned something different, use it
+            if ($transformedExpression !== $expression) {
+                $expression = $transformedExpression;
+            }
+        }
+
+        // Handle field references (strings starting with $)
+        if (is_string($expression) && str_starts_with($expression, '$')) {
+            $fieldName = substr($expression, 1);
+            try {
+                return $this->getVariableValue($fieldName, $data);
+            } catch (UnknownVariableException $e) {
+                if ($this->undefinedEqualsNull) {
+                    return null;
+                }
+                throw $e;
+            }
+        }
+
+        // Handle literal values
+        if (!is_array($expression)) {
+            return $expression;
+        }
+
+        // Handle arrays (lists)
+        if (array_is_list($expression)) {
+            return array_map(fn($item) => $this->evalAggExpression($item, $data), $expression);
+        }
+
+        // Handle aggregation operators
+        $keys = array_keys($expression);
+        if (count($keys) === 0) {
+            return $expression;
+        }
+
+        $firstKey = $keys[0];
+
+        // Check if it's an aggregation operator
+        if (str_starts_with($firstKey, '$')) {
+            $operator = $this->aggregationOperators[$firstKey] ?? null;
+
+            if (!is_callable($operator)) {
+                throw new SyntaxError("Unsupported aggregation operator: {$firstKey}");
+            }
+
+            return $operator($expression[$firstKey], $data);
+        }
+
+        // Return as-is if not an operator
+        return $expression;
+    }
+
+    /**
+     * Helper method to extract exactly 2 operands for binary operators
+     * @return array{mixed, mixed}
+     */
+    private function getBinaryOperands(mixed $operands, string $operator, array $data): array
+    {
+        if (!is_array($operands) || !array_is_list($operands) || count($operands) !== 2) {
+            throw new SyntaxError("{$operator} requires an array of exactly 2 operands");
+        }
+
+        return [
+            $this->evalAggExpression($operands[0], $data),
+            $this->evalAggExpression($operands[1], $data)
+        ];
+    }
+
+    // Arithmetic operators
+    private function evalAggAdd(mixed $operands, array $data): int|float
+    {
+        if (!is_array($operands) || !array_is_list($operands)) {
+            throw new SyntaxError('$add requires an array of operands');
+        }
+
+        $sum = 0;
+        foreach ($operands as $operand) {
+            $value = $this->evalAggExpression($operand, $data);
+            if (!is_numeric($value)) {
+                throw new SyntaxError('$add operands must be numeric');
+            }
+            $sum += $value;
+        }
+        return $sum;
+    }
+
+    private function evalAggSubtract(mixed $operands, array $data): int|float
+    {
+        [$value1, $value2] = $this->getBinaryOperands($operands, '$subtract', $data);
+
+        if (!is_numeric($value1) || !is_numeric($value2)) {
+            throw new SyntaxError('$subtract operands must be numeric');
+        }
+
+        return $value1 - $value2;
+    }
+
+    private function evalAggMultiply(mixed $operands, array $data): int|float
+    {
+        if (!is_array($operands) || !array_is_list($operands)) {
+            throw new SyntaxError('$multiply requires an array of operands');
+        }
+
+        $product = 1;
+        foreach ($operands as $operand) {
+            $value = $this->evalAggExpression($operand, $data);
+            if (!is_numeric($value)) {
+                throw new SyntaxError('$multiply operands must be numeric');
+            }
+            $product *= $value;
+        }
+        return $product;
+    }
+
+    private function evalAggDivide(mixed $operands, array $data): int|float
+    {
+        [$value1, $value2] = $this->getBinaryOperands($operands, '$divide', $data);
+
+        if (!is_numeric($value1) || !is_numeric($value2)) {
+            throw new SyntaxError('$divide operands must be numeric');
+        }
+
+        if ($value2 == 0) {
+            throw new SyntaxError('$divide: division by zero');
+        }
+
+        return $value1 / $value2;
+    }
+
+    private function evalAggMod(mixed $operands, array $data): int|float
+    {
+        [$value1, $value2] = $this->getBinaryOperands($operands, '$mod', $data);
+
+        if (!is_numeric($value1) || !is_numeric($value2)) {
+            throw new SyntaxError('$mod operands must be numeric');
+        }
+
+        if ($value2 == 0) {
+            throw new SyntaxError('$mod: division by zero');
+        }
+
+        return $value1 % $value2;
+    }
+
+    // Comparison operators for aggregation expressions
+    private function evalAggEq(mixed $operands, array $data): bool
+    {
+        [$value1, $value2] = $this->getBinaryOperands($operands, '$eq', $data);
+        return $this->isEqual($value1, $value2);
+    }
+
+    private function evalAggNe(mixed $operands, array $data): bool
+    {
+        [$value1, $value2] = $this->getBinaryOperands($operands, '$ne', $data);
+        return !$this->isEqual($value1, $value2);
+    }
+
+    private function evalAggGt(mixed $operands, array $data): bool
+    {
+        [$value1, $value2] = $this->getBinaryOperands($operands, '$gt', $data);
+        return $value1 > $value2;
+    }
+
+    private function evalAggGte(mixed $operands, array $data): bool
+    {
+        [$value1, $value2] = $this->getBinaryOperands($operands, '$gte', $data);
+        return $value1 >= $value2;
+    }
+
+    private function evalAggLt(mixed $operands, array $data): bool
+    {
+        [$value1, $value2] = $this->getBinaryOperands($operands, '$lt', $data);
+        return $value1 < $value2;
+    }
+
+    private function evalAggLte(mixed $operands, array $data): bool
+    {
+        [$value1, $value2] = $this->getBinaryOperands($operands, '$lte', $data);
+        return $value1 <= $value2;
+    }
+
+    private function evalAggCond(mixed $operands, array $data): mixed
+    {
+        if (!is_array($operands) || array_is_list($operands)) {
+            throw new SyntaxError('$cond requires an object with if, then, else properties');
+        }
+
+        if (!isset($operands['if']) || !isset($operands['then']) || !isset($operands['else'])) {
+            throw new SyntaxError('$cond requires if, then, and else properties');
+        }
+
+        $condition = $this->evalAggExpression($operands['if'], $data);
+
+        if ($condition) {
+            return $this->evalAggExpression($operands['then'], $data);
+        } else {
+            return $this->evalAggExpression($operands['else'], $data);
+        }
     }
 }
