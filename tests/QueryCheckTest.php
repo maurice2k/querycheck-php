@@ -1136,4 +1136,395 @@ class QueryCheckTest extends TestCase
         $qc->setStrictMode(false);
         $this->assertFalse($qc->test($vars)); // (100-10)=90 is NOT < 90
     }
+
+    // AGGREGATION $NOT OPERATOR TESTS
+
+    #[TestDox('$expr with $not // $not[true] returns false')]
+    public function testExprAggNotTrue(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [true]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $not // $not[false] returns true')]
+    public function testExprAggNotFalse(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [false]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $not // $not[null] returns true')]
+    public function testExprAggNotNull(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [null]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $not // $not[0] returns true')]
+    public function testExprAggNotZero(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [0]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $not // $not[1] returns false')]
+    public function testExprAggNotOne(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [1]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $not // $not[137] returns false')]
+    public function testExprAggNotNonZeroNumber(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [137]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $not // $not[[false]] returns false (array is truthy)')]
+    public function testExprAggNotArrayWithFalse(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [[false]]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $not // $not[$gt[$qty, 250]]')]
+    public function testExprAggNotWithGtExpression(): void
+    {
+        $vars = ['qty' => 200];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$gt' => ['$qty', 250]]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars)); // qty (200) is NOT > 250, so $not returns true
+    }
+
+    #[TestDox('$expr with $not // $not[$gt[$qty, 250]] returns false when qty > 250')]
+    public function testExprAggNotWithGtExpressionFalse(): void
+    {
+        $vars = ['qty' => 300];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$gt' => ['$qty', 250]]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($vars)); // qty (300) > 250, so $not returns false
+    }
+
+    #[TestDox('$expr with $not // $not[$eq[field1, field2]] when fields are equal')]
+    public function testExprAggNotWithEqEqual(): void
+    {
+        $vars = ['field1' => 100, 'field2' => 100];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$eq' => ['$field1', '$field2']]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($vars)); // fields are equal, so $not returns false
+    }
+
+    #[TestDox('$expr with $not // $not[$eq[field1, field2]] when fields are not equal')]
+    public function testExprAggNotWithEqNotEqual(): void
+    {
+        $vars = ['field1' => 100, 'field2' => 200];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$eq' => ['$field1', '$field2']]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars)); // fields are not equal, so $not returns true
+    }
+
+    #[TestDox('$expr with $not // $not[$eq[field, literal]] when equal')]
+    public function testExprAggNotWithEqLiteralEqual(): void
+    {
+        $vars = ['status' => 'active'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$eq' => ['$status', 'active']]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($vars)); // status equals 'active', so $not returns false
+    }
+
+    #[TestDox('$expr with $not // $not[$eq[field, literal]] when not equal')]
+    public function testExprAggNotWithEqLiteralNotEqual(): void
+    {
+        $vars = ['status' => 'inactive'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$eq' => ['$status', 'active']]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars)); // status does not equal 'active', so $not returns true
+    }
+
+    // AGGREGATION $IN OPERATOR TESTS
+
+    #[TestDox('$expr with $in // value in array returns true')]
+    public function testExprAggInValueInArray(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$in' => ['banana', ['apple', 'banana', 'cherry']]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $in // value not in array returns false')]
+    public function testExprAggInValueNotInArray(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$in' => ['orange', ['apple', 'banana', 'cherry']]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $in // field value in array')]
+    public function testExprAggInFieldValueInArray(): void
+    {
+        $vars = ['fruit' => 'banana', 'in_stock' => ['apple', 'banana', 'cherry']];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$in' => ['$fruit', '$in_stock']
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $in // field value not in array')]
+    public function testExprAggInFieldValueNotInArray(): void
+    {
+        $vars = ['fruit' => 'orange', 'in_stock' => ['apple', 'banana', 'cherry']];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$in' => ['$fruit', '$in_stock']
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $in // number in array')]
+    public function testExprAggInNumberInArray(): void
+    {
+        $vars = ['value' => 137];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$in' => ['$value', [100, 137, 200]]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $in // null in array')]
+    public function testExprAggInNullInArray(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$in' => [null, [1, 2, null, 3]]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $in // empty array returns false')]
+    public function testExprAggInEmptyArray(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$in' => ['banana', []]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $in // object in array of objects')]
+    public function testExprAggInObjectInArray(): void
+    {
+        $vars = ['item' => ['x' => 10, 'y' => 11], 'items' => [['x' => 10, 'y' => 11], ['x' => 20, 'y' => 21]]];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$in' => ['$item', '$items']
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    // COMBINED TESTS
+
+    #[TestDox('$expr with $not and $in // $not[$in[value, array]]')]
+    public function testExprAggNotWithIn(): void
+    {
+        $vars = ['fruit' => 'orange', 'in_stock' => ['apple', 'banana', 'cherry']];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$in' => ['$fruit', '$in_stock']]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars)); // orange is NOT in stock, so $not returns true
+    }
+
+    #[TestDox('$expr with $not and $in // $not[$in[value, array]] returns false when value is in array')]
+    public function testExprAggNotWithInFalse(): void
+    {
+        $vars = ['fruit' => 'banana', 'in_stock' => ['apple', 'banana', 'cherry']];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$in' => ['$fruit', '$in_stock']]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($vars)); // banana IS in stock, so $not returns false
+    }
+
+    #[TestDox('$expr with $not and $in // $not[$in[literal, literal array]]')]
+    public function testExprAggNotWithInLiterals(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$in' => ['grape', ['apple', 'banana', 'cherry']]]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars)); // 'grape' is NOT in array, so $not returns true
+    }
+
+    #[TestDox('$expr with $not and $in // $not[$in[number, number array]]')]
+    public function testExprAggNotWithInNumbers(): void
+    {
+        $vars = ['value' => 42];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$in' => ['$value', [10, 20, 30, 40]]]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars)); // 42 is NOT in array, so $not returns true
+    }
+
+    #[TestDox('$expr with $not and $in // $not[$in[computed value, array]]')]
+    public function testExprAggNotWithInComputedValue(): void
+    {
+        $vars = ['price' => 100, 'discount' => 30, 'invalid_prices' => [50, 60, 80]];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$in' => [
+                        ['$subtract' => ['$price', '$discount']],
+                        '$invalid_prices'
+                    ]]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars)); // 100 - 30 = 70, which is NOT in invalid_prices, so $not returns true
+    }
+
+    #[TestDox('$expr with $not and $in // $not[$in[computed value, array]] returns false when value is in array')]
+    public function testExprAggNotWithInComputedValueFalse(): void
+    {
+        $vars = ['price' => 100, 'discount' => 20, 'invalid_prices' => [50, 60, 80]];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [
+                    ['$in' => [
+                        ['$subtract' => ['$price', '$discount']],
+                        '$invalid_prices'
+                    ]]
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertFalse($qc->test($vars)); // 100 - 20 = 80, which IS in invalid_prices, so $not returns false
+    }
+
+    #[TestDox('$expr with $in and comparison // check if discounted price is in valid range')]
+    public function testExprAggInWithComparison(): void
+    {
+        $vars = ['price' => 100, 'discount' => 20, 'valid_prices' => [50, 80, 100, 150]];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$in' => [
+                    ['$subtract' => ['$price', '$discount']],
+                    '$valid_prices'
+                ]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($vars)); // 100 - 20 = 80, which is in valid_prices
+    }
 }

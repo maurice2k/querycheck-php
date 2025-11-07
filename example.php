@@ -278,3 +278,137 @@ $volumeQuery = new QueryCheck([
 echo "Volume check (length * width * height > 100): ";
 echo $volumeQuery->test($dimensions) ? "✓ Large package\n" : "✗ Small package\n";
 echo "\n";
+
+// Example 8: $expr with $not aggregation operator
+echo "Example 8: \$expr with \$not Aggregation Operator\n";
+echo "==================================================\n\n";
+
+$inventory = [
+    'item' => 'widget',
+    'qty' => 200,
+];
+
+// Check if qty is NOT greater than 250
+$notGreaterQuery = new QueryCheck([
+    '$expr' => [
+        '$not' => [
+            ['$gt' => ['$qty', 250]]
+        ]
+    ]
+]);
+
+echo "Inventory check (qty NOT > 250): ";
+echo $notGreaterQuery->test($inventory) ? "✓ Stock is within range\n" : "✗ Stock exceeds range\n";
+
+// $not behavior: false, null, 0 evaluate as false (so $not returns true)
+$truthyTests = [
+    ['value' => false, 'expected' => true],
+    ['value' => null, 'expected' => true],
+    ['value' => 0, 'expected' => true],
+    ['value' => 1, 'expected' => false],
+    ['value' => 137, 'expected' => false],
+    ['value' => [false], 'expected' => false], // arrays are truthy
+];
+
+echo "\n\$not truthiness tests:\n";
+foreach ($truthyTests as $test) {
+    $data = ['value' => $test['value']];
+    $query = new QueryCheck([
+        '$expr' => [
+            '$not' => ['$value']
+        ]
+    ]);
+    $result = $query->test($data);
+    $valueStr = is_array($test['value']) ? '[false]' : var_export($test['value'], true);
+    $status = $result === $test['expected'] ? '✓' : '✗';
+    echo "  $status \$not[$valueStr] = " . ($result ? 'true' : 'false') . "\n";
+}
+echo "\n";
+
+// Example 9: $expr with $in aggregation operator
+echo "Example 9: \$expr with \$in Aggregation Operator\n";
+echo "=================================================\n\n";
+
+$fruit = [
+    'name' => 'banana',
+    'in_stock' => ['apple', 'banana', 'cherry'],
+];
+
+// Check if fruit name is in stock
+$inStockQuery = new QueryCheck([
+    '$expr' => [
+        '$in' => ['$name', '$in_stock']
+    ]
+]);
+
+echo "Fruit availability check (name in in_stock): ";
+echo $inStockQuery->test($fruit) ? "✓ Available\n" : "✗ Out of stock\n";
+
+// Check if a literal value is in an array
+$literalInQuery = new QueryCheck([
+    '$expr' => [
+        '$in' => ['strawberry', ['apple', 'banana', 'cherry']]
+    ]
+]);
+
+echo "Literal value check ('strawberry' in array): ";
+echo $literalInQuery->test($fruit) ? "✓ Found\n" : "✗ Not found\n";
+
+// Check if discounted price is in valid price points
+$pricing = [
+    'price' => 100,
+    'discount' => 20,
+    'valid_prices' => [50, 80, 100, 150],
+];
+
+$validPriceQuery = new QueryCheck([
+    '$expr' => [
+        '$in' => [
+            ['$subtract' => ['$price', '$discount']],
+            '$valid_prices'
+        ]
+    ]
+]);
+
+echo "Discounted price check (price - discount in valid_prices): ";
+echo $validPriceQuery->test($pricing) ? "✓ Valid price point\n" : "✗ Invalid price point\n";
+echo "\n";
+
+// Example 10: Combining $not and $in
+echo "Example 10: Combining \$not and \$in\n";
+echo "=====================================\n\n";
+
+$product = [
+    'category' => 'electronics',
+    'restricted_categories' => ['weapons', 'alcohol', 'tobacco'],
+];
+
+// Check if category is NOT in restricted list
+$allowedCategoryQuery = new QueryCheck([
+    '$expr' => [
+        '$not' => [
+            ['$in' => ['$category', '$restricted_categories']]
+        ]
+    ]
+]);
+
+echo "Category restriction check (category NOT in restricted): ";
+echo $allowedCategoryQuery->test($product) ? "✓ Category allowed\n" : "✗ Category restricted\n";
+
+// Another example: check if item is out of stock
+$item = [
+    'sku' => 'WIDGET-123',
+    'available_skus' => ['GADGET-456', 'TOOL-789'],
+];
+
+$outOfStockQuery = new QueryCheck([
+    '$expr' => [
+        '$not' => [
+            ['$in' => ['$sku', '$available_skus']]
+        ]
+    ]
+]);
+
+echo "Stock availability check (sku NOT in available_skus): ";
+echo $outOfStockQuery->test($item) ? "⚠️  Out of stock\n" : "✓ In stock\n";
+echo "\n";

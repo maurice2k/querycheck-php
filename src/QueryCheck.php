@@ -59,6 +59,8 @@ class QueryCheck
             '$gte' => $this->evalAggGte(...),
             '$lt' => $this->evalAggLt(...),
             '$lte' => $this->evalAggLte(...),
+            '$not' => $this->evalAggNot(...),
+            '$in' => $this->evalAggIn(...),
             '$cond' => $this->evalAggCond(...),
         ];
     }
@@ -657,5 +659,44 @@ class QueryCheck
         } else {
             return $this->evalAggExpression($operands['else'], $data);
         }
+    }
+
+    private function evalAggNot(mixed $operands, array $data): bool
+    {
+        if (!is_array($operands) || !array_is_list($operands) || count($operands) !== 1) {
+            throw new SyntaxError('$not requires an array with exactly one expression');
+        }
+
+        $value = $this->evalAggExpression($operands[0], $data);
+
+        // MongoDB behavior: false, null, 0, and undefined evaluate as false
+        // All other values (including non-zero numbers and arrays) evaluate as true
+        if ($value === false || $value === null || $value === 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function evalAggIn(mixed $operands, array $data): bool
+    {
+        if (!is_array($operands) || !array_is_list($operands) || count($operands) !== 2) {
+            throw new SyntaxError('$in requires an array with exactly two elements: [value, array]');
+        }
+
+        $searchValue = $this->evalAggExpression($operands[0], $data);
+        $arrayValue = $this->evalAggExpression($operands[1], $data);
+
+        if (!is_array($arrayValue) || !array_is_list($arrayValue)) {
+            throw new SyntaxError('$in: second operand must be an array');
+        }
+
+        foreach ($arrayValue as $item) {
+            if ($this->isEqual($searchValue, $item)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
