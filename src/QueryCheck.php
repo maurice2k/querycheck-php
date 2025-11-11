@@ -234,6 +234,20 @@ class QueryCheck
         return $data;
     }
 
+    /**
+     * Evaluates the $or logical operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/or/
+     *
+     * Performs a logical OR operation on an array of expressions and selects
+     * the documents that satisfy at least one of the expressions.
+     *
+     * Syntax: { $or: [ <expression1>, <expression2>, ... ] }
+     *
+     * @param mixed $query Array of query expressions
+     * @param array $data The data context
+     * @return bool True if at least one expression matches, false otherwise
+     */
     private function evalOr(mixed $query, array $data): bool
     {
         if (!is_array($query) || !array_is_list($query)) {
@@ -248,6 +262,20 @@ class QueryCheck
         return $result;
     }
 
+    /**
+     * Evaluates the $and logical operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/and/
+     *
+     * Performs a logical AND operation on an array of expressions and selects
+     * the documents that satisfy all the expressions.
+     *
+     * Syntax: { $and: [ <expression1>, <expression2>, ... ] }
+     *
+     * @param mixed $query Array of query expressions
+     * @param array $data The data context
+     * @return bool True if all expressions match, false otherwise
+     */
     private function evalAnd(mixed $query, array $data): bool
     {
         if (!is_array($query) || !array_is_list($query)) {
@@ -263,6 +291,21 @@ class QueryCheck
         return $result;
     }
 
+    /**
+     * Evaluates the $eq query operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/eq/
+     *
+     * Matches documents where the value of a field equals the specified value.
+     *
+     * Syntax: { <field>: { $eq: <value> } } or shorthand: { <field>: <value> }
+     *
+     * @param string $variableName The field name being compared
+     * @param mixed $variableValue The actual field value
+     * @param mixed $operand The value to compare against
+     * @param mixed $expression The full expression context
+     * @return bool True if values are equal, false otherwise
+     */
     private function evalEq(string $variableName, mixed $variableValue, mixed $operand, mixed $expression = null): bool
     {
         if (gettype($variableValue) === gettype($operand) && !is_array($variableValue) && !is_object($variableValue)) {
@@ -302,6 +345,21 @@ class QueryCheck
         return false;
     }
 
+    /**
+     * Evaluates the $ne query operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/ne/
+     *
+     * Matches documents where the value of a field is not equal to the specified value.
+     *
+     * Syntax: { <field>: { $ne: <value> } }
+     *
+     * @param string $variableName The field name being compared
+     * @param mixed $variableValue The actual field value
+     * @param mixed $operand The value to compare against
+     * @param mixed $expression The full expression context
+     * @return bool True if values are not equal, false otherwise
+     */
     private function evalNe(string $variableName, mixed $variableValue, mixed $operand, mixed $expression = null): bool
     {
         if (!$this->strictMode) {
@@ -319,6 +377,21 @@ class QueryCheck
         return !$this->isEqual($variableValue, $operand);
     }
 
+    /**
+     * Evaluates the $gt query operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/gt/
+     *
+     * Matches documents where the value of a field is greater than the specified value.
+     *
+     * Syntax: { <field>: { $gt: <value> } }
+     *
+     * @param string $variableName The field name being compared
+     * @param mixed $variableValue The actual field value
+     * @param mixed $operand The value to compare against
+     * @param mixed $expression The full expression context
+     * @return bool True if field value is greater than operand, false otherwise
+     */
     private function evalGt(string $variableName, mixed $variableValue, mixed $operand, mixed $expression = null): bool
     {
         if ($this->strictMode && gettype($variableValue) !== gettype($operand) && $variableValue !== null) {
@@ -328,6 +401,21 @@ class QueryCheck
         return $variableValue > $operand;
     }
 
+    /**
+     * Evaluates the $gte query operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/gte/
+     *
+     * Matches documents where the value of a field is greater than or equal to the specified value.
+     *
+     * Syntax: { <field>: { $gte: <value> } }
+     *
+     * @param string $variableName The field name being compared
+     * @param mixed $variableValue The actual field value
+     * @param mixed $operand The value to compare against
+     * @param mixed $expression The full expression context
+     * @return bool True if field value is greater than or equal to operand, false otherwise
+     */
     private function evalGte(string $variableName, mixed $variableValue, mixed $operand, mixed $expression = null): bool
     {
         if ($this->strictMode && gettype($variableValue) !== gettype($operand) && $variableValue !== null) {
@@ -336,6 +424,21 @@ class QueryCheck
         return $variableValue >= $operand;
     }
 
+    /**
+     * Evaluates the $lt query operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/lt/
+     *
+     * Matches documents where the value of a field is less than the specified value.
+     *
+     * Syntax: { <field>: { $lt: <value> } }
+     *
+     * @param string $variableName The field name being compared
+     * @param mixed $variableValue The actual field value
+     * @param mixed $operand The value to compare against
+     * @param mixed $expression The full expression context
+     * @return bool True if field value is less than operand, false otherwise
+     */
     private function evalLt(string $variableName, mixed $variableValue, mixed $operand, mixed $expression = null): bool
     {
         if ($this->strictMode && gettype($variableValue) !== gettype($operand) && $variableValue !== null) {
@@ -344,6 +447,21 @@ class QueryCheck
         return $variableValue < $operand;
     }
 
+    /**
+     * Evaluates the $lte query operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/lte/
+     *
+     * Matches documents where the value of a field is less than or equal to the specified value.
+     *
+     * Syntax: { <field>: { $lte: <value> } }
+     *
+     * @param string $variableName The field name being compared
+     * @param mixed $variableValue The actual field value
+     * @param mixed $operand The value to compare against
+     * @param mixed $expression The full expression context
+     * @return bool True if field value is less than or equal to operand, false otherwise
+     */
     private function evalLte(string $variableName, mixed $variableValue, mixed $operand, mixed $expression = null): bool
     {
         if ($this->strictMode && gettype($variableValue) !== gettype($operand) && $variableValue !== null) {
@@ -352,6 +470,21 @@ class QueryCheck
         return $variableValue <= $operand;
     }
 
+    /**
+     * Evaluates the $in query operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/in/
+     *
+     * Matches documents where the value of a field equals any value in the specified array.
+     *
+     * Syntax: { <field>: { $in: [ <value1>, <value2>, ... ] } }
+     *
+     * @param string $variableName The field name being compared
+     * @param mixed $variableValue The actual field value
+     * @param mixed $operand Array of values to match against
+     * @param mixed $expression The full expression context
+     * @return bool True if field value is in the array, false otherwise
+     */
     private function evalIn(string $variableName, mixed $variableValue, mixed $operand, mixed $expression = null): bool
     {
         if (!is_array($operand) || !array_is_list($operand)) {
@@ -369,6 +502,21 @@ class QueryCheck
         return false;
     }
 
+    /**
+     * Evaluates the $regex query operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/regex/
+     *
+     * Provides regular expression capabilities for pattern matching strings in queries.
+     *
+     * Syntax: { <field>: { $regex: <pattern>, $options: <options> } }
+     *
+     * @param string $variableName The field name being compared
+     * @param mixed $variableValue The actual field value
+     * @param mixed $operand The regex pattern
+     * @param mixed $expression The full expression context (may contain $options)
+     * @return bool True if pattern matches, false otherwise
+     */
     private function evalRegExp(string $variableName, mixed $variableValue, mixed $operand, mixed $expression): bool
     {
         $options = $expression['$options'] ?? null;
@@ -379,11 +527,37 @@ class QueryCheck
         return (bool)preg_match($pattern, (string)$variableValue);
     }
 
+    /**
+     * Helper method that always returns true
+     *
+     * Used for operators like $options that don't need evaluation themselves.
+     *
+     * @param string $variableName The field name (unused)
+     * @param mixed $variableValue The field value (unused)
+     * @param mixed $operand The operand (unused)
+     * @param mixed $expression The expression (unused)
+     * @return bool Always returns true
+     */
     private function evalTrue(string $variableName = '', mixed $variableValue = null, mixed $operand = null, mixed $expression = null): bool
     {
         return true;
     }
 
+    /**
+     * Evaluates the $not query operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/not/
+     *
+     * Performs a logical NOT operation on the specified operator expression.
+     *
+     * Syntax: { <field>: { $not: { <operator-expression> } } }
+     *
+     * @param string $variableName The field name being compared
+     * @param mixed $variableValue The actual field value
+     * @param mixed $operand The operator expression to negate
+     * @param mixed $expression The full expression context
+     * @return bool The negated result of the operator expression
+     */
     private function evalNot(string $variableName, mixed $variableValue, mixed $operand, mixed $expression = null): bool
     {
         return !$this->evalQueryExpression($variableName, $variableValue, $operand, []);
@@ -444,6 +618,19 @@ class QueryCheck
         return true;
     }
 
+    /**
+     * Evaluates the $expr operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/query/expr/
+     *
+     * Allows the use of aggregation expressions within the query language.
+     *
+     * Syntax: { $expr: <aggregation expression> }
+     *
+     * @param mixed $expression Aggregation expression to evaluate
+     * @param array $data The data context
+     * @return bool The boolean result of the expression
+     */
     private function evalExpr(mixed $expression, array $data): bool
     {
         if (!is_array($expression) || array_is_list($expression)) {
@@ -529,7 +716,22 @@ class QueryCheck
         ];
     }
 
-    // Arithmetic operators
+    // Aggregation operators
+
+    /**
+     * Evaluates the $add aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/add/
+     *
+     * Adds numbers together or adds numbers and a date. If one of the arguments is a date,
+     * $add treats the other arguments as milliseconds to add to the date.
+     *
+     * Syntax: { $add: [ <expression1>, <expression2>, ... ] }
+     *
+     * @param mixed $operands Array of numeric expressions to add
+     * @param array $data The data context
+     * @return int|float The sum of all operands
+     */
     private function evalAggAdd(mixed $operands, array $data): int|float
     {
         if (!is_array($operands) || !array_is_list($operands)) {
@@ -547,6 +749,20 @@ class QueryCheck
         return $sum;
     }
 
+    /**
+     * Evaluates the $subtract aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/subtract/
+     *
+     * Subtracts two numbers to return the difference, or two dates to return the difference
+     * in milliseconds, or a date and a number in milliseconds to return the resulting date.
+     *
+     * Syntax: { $subtract: [ <expression1>, <expression2> ] }
+     *
+     * @param mixed $operands Array with exactly two numeric expressions
+     * @param array $data The data context
+     * @return int|float The difference between the two operands
+     */
     private function evalAggSubtract(mixed $operands, array $data): int|float
     {
         [$value1, $value2] = $this->getBinaryOperands($operands, '$subtract', $data);
@@ -558,6 +774,19 @@ class QueryCheck
         return $value1 - $value2;
     }
 
+    /**
+     * Evaluates the $multiply aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/multiply/
+     *
+     * Multiplies numbers together and returns the product.
+     *
+     * Syntax: { $multiply: [ <expression1>, <expression2>, ... ] }
+     *
+     * @param mixed $operands Array of numeric expressions to multiply
+     * @param array $data The data context
+     * @return int|float The product of all operands
+     */
     private function evalAggMultiply(mixed $operands, array $data): int|float
     {
         if (!is_array($operands) || !array_is_list($operands)) {
@@ -575,6 +804,19 @@ class QueryCheck
         return $product;
     }
 
+    /**
+     * Evaluates the $divide aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/divide/
+     *
+     * Divides one number by another and returns the result.
+     *
+     * Syntax: { $divide: [ <expression1>, <expression2> ] }
+     *
+     * @param mixed $operands Array with exactly two numeric expressions
+     * @param array $data The data context
+     * @return int|float The quotient of the division
+     */
     private function evalAggDivide(mixed $operands, array $data): int|float
     {
         [$value1, $value2] = $this->getBinaryOperands($operands, '$divide', $data);
@@ -590,6 +832,19 @@ class QueryCheck
         return $value1 / $value2;
     }
 
+    /**
+     * Evaluates the $mod aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/mod/
+     *
+     * Divides one number by another and returns the remainder.
+     *
+     * Syntax: { $mod: [ <expression1>, <expression2> ] }
+     *
+     * @param mixed $operands Array with exactly two numeric expressions
+     * @param array $data The data context
+     * @return int|float The remainder of the division
+     */
     private function evalAggMod(mixed $operands, array $data): int|float
     {
         [$value1, $value2] = $this->getBinaryOperands($operands, '$mod', $data);
@@ -605,43 +860,133 @@ class QueryCheck
         return $value1 % $value2;
     }
 
-    // Comparison operators for aggregation expressions
+    /**
+     * Evaluates the $eq aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/eq/
+     *
+     * Compares two values and returns true if they are equivalent, false otherwise.
+     *
+     * Syntax: { $eq: [ <expression1>, <expression2> ] }
+     *
+     * @param mixed $operands Array with exactly two expressions
+     * @param array $data The data context
+     * @return bool True if values are equal, false otherwise
+     */
     private function evalAggEq(mixed $operands, array $data): bool
     {
         [$value1, $value2] = $this->getBinaryOperands($operands, '$eq', $data);
         return $this->isEqual($value1, $value2);
     }
 
+    /**
+     * Evaluates the $ne aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/ne/
+     *
+     * Compares two values and returns true if they are not equivalent, false otherwise.
+     *
+     * Syntax: { $ne: [ <expression1>, <expression2> ] }
+     *
+     * @param mixed $operands Array with exactly two expressions
+     * @param array $data The data context
+     * @return bool True if values are not equal, false otherwise
+     */
     private function evalAggNe(mixed $operands, array $data): bool
     {
         [$value1, $value2] = $this->getBinaryOperands($operands, '$ne', $data);
         return !$this->isEqual($value1, $value2);
     }
 
+    /**
+     * Evaluates the $gt aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/gt/
+     *
+     * Compares two values and returns true if the first value is greater than the second.
+     *
+     * Syntax: { $gt: [ <expression1>, <expression2> ] }
+     *
+     * @param mixed $operands Array with exactly two expressions
+     * @param array $data The data context
+     * @return bool True if first value is greater than second, false otherwise
+     */
     private function evalAggGt(mixed $operands, array $data): bool
     {
         [$value1, $value2] = $this->getBinaryOperands($operands, '$gt', $data);
         return $value1 > $value2;
     }
 
+    /**
+     * Evaluates the $gte aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/gte/
+     *
+     * Compares two values and returns true if the first value is greater than or equal to the second.
+     *
+     * Syntax: { $gte: [ <expression1>, <expression2> ] }
+     *
+     * @param mixed $operands Array with exactly two expressions
+     * @param array $data The data context
+     * @return bool True if first value is greater than or equal to second, false otherwise
+     */
     private function evalAggGte(mixed $operands, array $data): bool
     {
         [$value1, $value2] = $this->getBinaryOperands($operands, '$gte', $data);
         return $value1 >= $value2;
     }
 
+    /**
+     * Evaluates the $lt aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/lt/
+     *
+     * Compares two values and returns true if the first value is less than the second.
+     *
+     * Syntax: { $lt: [ <expression1>, <expression2> ] }
+     *
+     * @param mixed $operands Array with exactly two expressions
+     * @param array $data The data context
+     * @return bool True if first value is less than second, false otherwise
+     */
     private function evalAggLt(mixed $operands, array $data): bool
     {
         [$value1, $value2] = $this->getBinaryOperands($operands, '$lt', $data);
         return $value1 < $value2;
     }
 
+    /**
+     * Evaluates the $lte aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/lte/
+     *
+     * Compares two values and returns true if the first value is less than or equal to the second.
+     *
+     * Syntax: { $lte: [ <expression1>, <expression2> ] }
+     *
+     * @param mixed $operands Array with exactly two expressions
+     * @param array $data The data context
+     * @return bool True if first value is less than or equal to second, false otherwise
+     */
     private function evalAggLte(mixed $operands, array $data): bool
     {
         [$value1, $value2] = $this->getBinaryOperands($operands, '$lte', $data);
         return $value1 <= $value2;
     }
 
+    /**
+     * Evaluates the $cond aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/cond/
+     *
+     * Evaluates a boolean expression to return one of two specified return expressions.
+     *
+     * Syntax: { $cond: { if: <boolean-expression>, then: <true-case>, else: <false-case> } }
+     *
+     * @param mixed $operands Object with 'if', 'then', and 'else' properties
+     * @param array $data The data context
+     * @return mixed The result of either 'then' or 'else' expression
+     */
     private function evalAggCond(mixed $operands, array $data): mixed
     {
         if (!is_array($operands) || array_is_list($operands)) {
@@ -661,6 +1006,25 @@ class QueryCheck
         }
     }
 
+    /**
+     * Evaluates the $not aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/not/
+     *
+     * Evaluates a boolean and returns the opposite boolean value.
+     * When passed an expression that evaluates to true, $not returns false;
+     * when passed an expression that evaluates to false, $not returns true.
+     *
+     * In addition to the false boolean value, $not evaluates as false the following:
+     * null, 0, and undefined values. The $not evaluates all other values as true,
+     * including non-zero numeric values and arrays.
+     *
+     * Syntax: { $not: [ <expression> ] }
+     *
+     * @param mixed $operands Array with exactly one expression
+     * @param array $data The data context
+     * @return bool The negated boolean result
+     */
     private function evalAggNot(mixed $operands, array $data): bool
     {
         if (!is_array($operands) || !array_is_list($operands) || count($operands) !== 1) {
@@ -678,14 +1042,22 @@ class QueryCheck
         return false;
     }
 
+    /**
+     * Evaluates the $in aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/in/
+     *
+     * Returns a boolean indicating whether a specified value is in an array.
+     *
+     * Syntax: { $in: [ <expression>, <array expression> ] }
+     *
+     * @param mixed $operands Array with exactly two elements: [value, array]
+     * @param array $data The data context
+     * @return bool True if value is found in array, false otherwise
+     */
     private function evalAggIn(mixed $operands, array $data): bool
     {
-        if (!is_array($operands) || !array_is_list($operands) || count($operands) !== 2) {
-            throw new SyntaxError('$in requires an array with exactly two elements: [value, array]');
-        }
-
-        $searchValue = $this->evalAggExpression($operands[0], $data);
-        $arrayValue = $this->evalAggExpression($operands[1], $data);
+        [$searchValue, $arrayValue] = $this->getBinaryOperands($operands, '$in', $data);
 
         if (!is_array($arrayValue) || !array_is_list($arrayValue)) {
             throw new SyntaxError('$in: second operand must be an array');
