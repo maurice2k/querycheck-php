@@ -6,6 +6,7 @@ namespace Maurice2k\QueryCheck\Tests;
 
 use Maurice2k\QueryCheck\QueryCheck;
 use Maurice2k\QueryCheck\Exception\StrictTypeError;
+use Maurice2k\QueryCheck\Exception\SyntaxError;
 use Maurice2k\QueryCheck\Exception\UnknownVariableException;
 use PHPUnit\Framework\Attributes\TestDox;
 use PHPUnit\Framework\TestCase;
@@ -48,6 +49,7 @@ class QueryCheckTest extends TestCase
                 'firstName' => 'First',
                 'lastName' => 'Last',
             ],
+            'myEmptyArray' => [],
         ];
     }
 
@@ -1395,7 +1397,7 @@ class QueryCheckTest extends TestCase
     {
         $qc = new QueryCheck([
             '$expr' => [
-                '$in' => ['banana', []]
+                '$in' => ['banana', '$myEmptyArray']
             ]
         ]);
         $qc->setStrictMode(false);
@@ -1526,5 +1528,125 @@ class QueryCheckTest extends TestCase
         ]);
         $qc->setStrictMode(false);
         $this->assertTrue($qc->test($vars)); // 100 - 20 = 80, which is in valid_prices
+    }
+
+    // $SIZE AGGREGATION OPERATOR TESTS
+
+    #[TestDox('$expr with $size // returns array length')]
+    public function testExprAggSize(): void
+    {
+        $vars = ['colors' => ['blue', 'black', 'red']];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$size' => '$colors'], 3]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $size // empty array returns 0')]
+    public function testExprAggSizeEmpty(): void
+    {
+        $vars = ['colors' => []];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$size' => '$colors'], 0]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $size // use with $gt for minimum elements')]
+    public function testExprAggSizeWithGt(): void
+    {
+        $vars = ['tags' => ['php', 'mongodb', 'querycheck', 'testing']];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$gt' => [['$size' => '$tags'], 3]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars)); // 4 > 3
+    }
+
+    #[TestDox('$expr with $size // use with $lt for maximum elements')]
+    public function testExprAggSizeWithLt(): void
+    {
+        $vars = ['items' => ['a', 'b']];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$lt' => [['$size' => '$items'], 5]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars)); // 2 < 5
+    }
+
+    #[TestDox('$expr with $size // use with $gte')]
+    public function testExprAggSizeWithGte(): void
+    {
+        $vars = ['items' => ['x', 'y', 'z']];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$gte' => [['$size' => '$items'], 3]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars)); // 3 >= 3
+    }
+
+    #[TestDox('$expr with $size // throws on non-array')]
+    public function testExprAggSizeThrowsOnNonArray(): void
+    {
+        $vars = ['name' => 'John'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$size' => '$name'], 4]
+            ]
+        ]);
+        $this->expectException(SyntaxError::class);
+        $this->expectExceptionMessage('$size: argument must resolve to an array');
+        $qc->test($vars);
+    }
+
+    #[TestDox('$expr with $size // throws on associative array (object)')]
+    public function testExprAggSizeThrowsOnObject(): void
+    {
+        $vars = ['data' => ['x' => 1, 'y' => 2]];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$size' => '$data'], 2]
+            ]
+        ]);
+        $this->expectException(SyntaxError::class);
+        $this->expectExceptionMessage('$size: argument must resolve to an array');
+        $qc->test($vars);
+    }
+
+    #[TestDox('$expr with $size // combined with $cond')]
+    public function testExprAggSizeWithCond(): void
+    {
+        $vars = ['items' => ['a', 'b', 'c', 'd', 'e']];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [
+                    ['$cond' => [
+                        'if' => ['$gte' => [['$size' => '$items'], 5]],
+                        'then' => 'bulk',
+                        'else' => 'single'
+                    ]],
+                    'bulk'
+                ]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars)); // size is 5, so returns 'bulk'
+    }
+
+    #[TestDox('$expr with $size // with literal array')]
+    public function testExprAggSizeWithLiteralArray(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$size' => [1, 2, 3, 4]], 4]
+            ]
+        ]);
+        $this->assertTrue($qc->test(['dummy' => 'value']));
     }
 }

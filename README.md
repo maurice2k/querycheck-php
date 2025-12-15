@@ -45,6 +45,9 @@ The following operators can be used within `$expr`:
 * [$not](https://www.mongodb.com/docs/manual/reference/operator/aggregation/not/) - Returns the boolean opposite of an expression
 * [$in](https://www.mongodb.com/docs/manual/reference/operator/aggregation/in/) - Returns true if a value is in an array
 
+**Array Operators:**
+* [$size](https://www.mongodb.com/docs/manual/reference/operator/aggregation/size/) - Returns the number of elements in an array
+
 **Conditional Operators:**
 * [$cond](https://www.mongodb.com/docs/manual/reference/operator/aggregation/cond/) - Conditional expression with if/then/else branches
 

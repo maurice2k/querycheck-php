@@ -62,6 +62,7 @@ class QueryCheck
             '$not' => $this->evalAggNot(...),
             '$in' => $this->evalAggIn(...),
             '$cond' => $this->evalAggCond(...),
+            '$size' => $this->evalAggSize(...),
         ];
     }
 
@@ -1070,5 +1071,29 @@ class QueryCheck
         }
 
         return false;
+    }
+
+    /**
+     * Evaluates the $size aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/size/
+     *
+     * Counts and returns the total number of items in an array.
+     *
+     * Syntax: { $size: <expression> }
+     *
+     * @param mixed $operand Expression that resolves to an array
+     * @param array $data The data context
+     * @return int The number of elements in the array
+     */
+    private function evalAggSize(mixed $operand, array $data): int
+    {
+        $value = $this->evalAggExpression($operand, $data);
+
+        if (!is_array($value) || !array_is_list($value)) {
+            throw new SyntaxError('$size: argument must resolve to an array');
+        }
+
+        return count($value);
     }
 }
