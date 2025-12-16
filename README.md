@@ -48,6 +48,18 @@ The following operators can be used within `$expr`:
 **Array Operators:**
 * [$size](https://www.mongodb.com/docs/manual/reference/operator/aggregation/size/) - Returns the number of elements in an array
 
+**String Operators:**
+* [$toLower](https://www.mongodb.com/docs/manual/reference/operator/aggregation/toLower/) - Converts a string to lowercase
+* [$toUpper](https://www.mongodb.com/docs/manual/reference/operator/aggregation/toUpper/) - Converts a string to uppercase
+* [$concat](https://www.mongodb.com/docs/manual/reference/operator/aggregation/concat/) - Concatenates strings
+* [$substr](https://www.mongodb.com/docs/manual/reference/operator/aggregation/substr/) - Returns a substring (codepoint-based)
+* [$substrBytes](https://www.mongodb.com/docs/manual/reference/operator/aggregation/substrBytes/) - Returns a substring (byte-based)
+* [$strLenBytes](https://www.mongodb.com/docs/manual/reference/operator/aggregation/strLenBytes/) - Returns the byte length of a string
+* [$strLenCP](https://www.mongodb.com/docs/manual/reference/operator/aggregation/strLenCP/) - Returns the codepoint length of a string
+* [$trim](https://www.mongodb.com/docs/manual/reference/operator/aggregation/trim/) - Removes whitespace or characters from both ends
+* [$ltrim](https://www.mongodb.com/docs/manual/reference/operator/aggregation/ltrim/) - Removes whitespace or characters from the start
+* [$rtrim](https://www.mongodb.com/docs/manual/reference/operator/aggregation/rtrim/) - Removes whitespace or characters from the end
+
 **Conditional Operators:**
 * [$cond](https://www.mongodb.com/docs/manual/reference/operator/aggregation/cond/) - Conditional expression with if/then/else branches
 

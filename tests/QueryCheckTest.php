@@ -1751,4 +1751,273 @@ class QueryCheckTest extends TestCase
         $varsEmpty = ['myList' => []];
         $this->assertFalse($qc->test($varsEmpty));
     }
+
+    // $toLower / $toUpper AGGREGATION OPERATOR TESTS
+
+    #[TestDox('$expr with $toLower // converts string to lowercase')]
+    public function testExprAggToLower(): void
+    {
+        $vars = ['name' => 'JOHN DOE'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$toLower' => '$name'], 'john doe']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $toUpper // converts string to uppercase')]
+    public function testExprAggToUpper(): void
+    {
+        $vars = ['name' => 'john doe'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$toUpper' => '$name'], 'JOHN DOE']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $toLower // case-insensitive comparison of two fields')]
+    public function testExprAggToLowerCaseInsensitiveComparison(): void
+    {
+        $vars = ['field1' => 'Hello World', 'field2' => 'HELLO WORLD'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [
+                    ['$toLower' => '$field1'],
+                    ['$toLower' => '$field2']
+                ]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $toLower // handles unicode characters')]
+    public function testExprAggToLowerUnicode(): void
+    {
+        $vars = ['name' => 'MÜLLER'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$toLower' => '$name'], 'müller']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $toUpper // throws on non-string')]
+    public function testExprAggToUpperThrowsOnNonString(): void
+    {
+        $vars = ['value' => 123];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$toUpper' => '$value'], '123']
+            ]
+        ]);
+        $this->expectException(SyntaxError::class);
+        $this->expectExceptionMessage('$toUpper: argument must resolve to a string');
+        $qc->test($vars);
+    }
+
+    // $substr / $substrBytes AGGREGATION OPERATOR TESTS
+
+    #[TestDox('$expr with $substr // extracts substring by codepoint')]
+    public function testExprAggSubstr(): void
+    {
+        $vars = ['text' => 'Hello World'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$substr' => ['$text', 0, 5]], 'Hello']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $substr // handles unicode codepoints')]
+    public function testExprAggSubstrUnicode(): void
+    {
+        $vars = ['text' => 'Müller'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$substr' => ['$text', 0, 3]], 'Mül']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $substr // negative length returns rest of string')]
+    public function testExprAggSubstrNegativeLength(): void
+    {
+        $vars = ['text' => 'Hello World'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$substr' => ['$text', 6, -1]], 'World']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $substrBytes // extracts substring by bytes')]
+    public function testExprAggSubstrBytes(): void
+    {
+        $vars = ['text' => 'Hello World'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$substrBytes' => ['$text', 0, 5]], 'Hello']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $substrBytes // byte-based on multibyte string')]
+    public function testExprAggSubstrBytesMultibyte(): void
+    {
+        $vars = ['text' => 'Müller']; // ü is 2 bytes in UTF-8
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$substrBytes' => ['$text', 0, 1]], 'M']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    // $strLenBytes AGGREGATION OPERATOR TESTS
+
+    #[TestDox('$expr with $strLenBytes // returns byte length')]
+    public function testExprAggStrLenBytes(): void
+    {
+        $vars = ['text' => 'Hello'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$strLenBytes' => '$text'], 5]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $strLenBytes // counts bytes for multibyte chars')]
+    public function testExprAggStrLenBytesMultibyte(): void
+    {
+        $vars = ['text' => 'Müller']; // ü is 2 bytes, so 7 bytes total
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$strLenBytes' => '$text'], 7]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $strLenCP // returns codepoint length')]
+    public function testExprAggStrLenCP(): void
+    {
+        $vars = ['text' => 'Hello'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$strLenCP' => '$text'], 5]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $strLenCP // counts codepoints for multibyte chars')]
+    public function testExprAggStrLenCPMultibyte(): void
+    {
+        $vars = ['text' => 'Müller']; // 6 codepoints (ü is 1 codepoint)
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$strLenCP' => '$text'], 6]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    // $trim / $ltrim / $rtrim AGGREGATION OPERATOR TESTS
+
+    #[TestDox('$expr with $trim // removes whitespace from both ends')]
+    public function testExprAggTrim(): void
+    {
+        $vars = ['text' => '  hello  '];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$trim' => ['input' => '$text']], 'hello']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $trim // removes specified chars')]
+    public function testExprAggTrimWithChars(): void
+    {
+        $vars = ['text' => '---hello---'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$trim' => ['input' => '$text', 'chars' => '-']], 'hello']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $ltrim // removes whitespace from left')]
+    public function testExprAggLtrim(): void
+    {
+        $vars = ['text' => '  hello  '];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$ltrim' => ['input' => '$text']], 'hello  ']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $rtrim // removes whitespace from right')]
+    public function testExprAggRtrim(): void
+    {
+        $vars = ['text' => '  hello  '];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$rtrim' => ['input' => '$text']], '  hello']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    // $concat AGGREGATION OPERATOR TESTS
+
+    #[TestDox('$expr with $concat // concatenates strings')]
+    public function testExprAggConcat(): void
+    {
+        $vars = ['first' => 'Hello', 'second' => 'World'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$concat' => ['$first', ' ', '$second']], 'Hello World']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $concat // concatenates multiple strings')]
+    public function testExprAggConcatMultiple(): void
+    {
+        $vars = ['a' => 'a', 'b' => 'b', 'c' => 'c'];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$concat' => ['$a', '$b', '$c']], 'abc']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $concat // throws on non-string')]
+    public function testExprAggConcatThrowsOnNonString(): void
+    {
+        $vars = ['text' => 'hello', 'num' => 123];
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [['$concat' => ['$text', '$num']], 'hello123']
+            ]
+        ]);
+        $this->expectException(SyntaxError::class);
+        $this->expectExceptionMessage('$concat: all arguments must resolve to strings');
+        $qc->test($vars);
+    }
 }

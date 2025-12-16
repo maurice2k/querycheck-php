@@ -63,6 +63,16 @@ class QueryCheck
             '$in' => $this->evalAggIn(...),
             '$cond' => $this->evalAggCond(...),
             '$size' => $this->evalAggSize(...),
+            '$toLower' => $this->evalAggToLower(...),
+            '$toUpper' => $this->evalAggToUpper(...),
+            '$substr' => $this->evalAggSubstr(...),
+            '$substrBytes' => $this->evalAggSubstrBytes(...),
+            '$strLenBytes' => $this->evalAggStrLenBytes(...),
+            '$strLenCP' => $this->evalAggStrLenCP(...),
+            '$trim' => $this->evalAggTrim(...),
+            '$ltrim' => $this->evalAggLtrim(...),
+            '$rtrim' => $this->evalAggRtrim(...),
+            '$concat' => $this->evalAggConcat(...),
         ];
     }
 
@@ -1095,5 +1105,298 @@ class QueryCheck
         }
 
         return count($value);
+    }
+
+    /**
+     * Evaluates the $toLower aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/toLower/
+     *
+     * Converts a string to lowercase.
+     *
+     * Syntax: { $toLower: <expression> }
+     *
+     * @param mixed $operand Expression that resolves to a string
+     * @param array $data The data context
+     * @return string The lowercase string
+     */
+    private function evalAggToLower(mixed $operand, array $data): string
+    {
+        $value = $this->evalAggExpression($operand, $data);
+
+        if (!is_string($value)) {
+            throw new SyntaxError('$toLower: argument must resolve to a string');
+        }
+
+        return mb_strtolower($value);
+    }
+
+    /**
+     * Evaluates the $toUpper aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/toUpper/
+     *
+     * Converts a string to uppercase.
+     *
+     * Syntax: { $toUpper: <expression> }
+     *
+     * @param mixed $operand Expression that resolves to a string
+     * @param array $data The data context
+     * @return string The uppercase string
+     */
+    private function evalAggToUpper(mixed $operand, array $data): string
+    {
+        $value = $this->evalAggExpression($operand, $data);
+
+        if (!is_string($value)) {
+            throw new SyntaxError('$toUpper: argument must resolve to a string');
+        }
+
+        return mb_strtoupper($value);
+    }
+
+    /**
+     * Evaluates the $substr aggregation operator (multibyte/codepoint based)
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/substr/
+     *
+     * Returns a substring of a string, starting at a specified index position
+     * and including the specified number of characters (codepoints).
+     *
+     * Syntax: { $substr: [ <string>, <start>, <length> ] }
+     *
+     * @param mixed $operands Array with string, start index, and length
+     * @param array $data The data context
+     * @return string The substring
+     */
+    private function evalAggSubstr(mixed $operands, array $data): string
+    {
+        if (!is_array($operands) || !array_is_list($operands) || count($operands) !== 3) {
+            throw new SyntaxError('$substr requires an array of [string, start, length]');
+        }
+
+        $string = $this->evalAggExpression($operands[0], $data);
+        $start = $this->evalAggExpression($operands[1], $data);
+        $length = $this->evalAggExpression($operands[2], $data);
+
+        if (!is_string($string)) {
+            throw new SyntaxError('$substr: first argument must resolve to a string');
+        }
+        if (!is_int($start)) {
+            throw new SyntaxError('$substr: second argument must resolve to an integer');
+        }
+        if (!is_int($length)) {
+            throw new SyntaxError('$substr: third argument must resolve to an integer');
+        }
+
+        if ($length < 0) {
+            return mb_substr($string, $start);
+        }
+
+        return mb_substr($string, $start, $length);
+    }
+
+    /**
+     * Evaluates the $substrBytes aggregation operator (byte based)
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/substrBytes/
+     *
+     * Returns a substring of a string, starting at a specified byte index
+     * and including the specified number of bytes.
+     *
+     * Syntax: { $substrBytes: [ <string>, <start>, <length> ] }
+     *
+     * @param mixed $operands Array with string, start byte index, and byte length
+     * @param array $data The data context
+     * @return string The substring
+     */
+    private function evalAggSubstrBytes(mixed $operands, array $data): string
+    {
+        if (!is_array($operands) || !array_is_list($operands) || count($operands) !== 3) {
+            throw new SyntaxError('$substrBytes requires an array of [string, start, length]');
+        }
+
+        $string = $this->evalAggExpression($operands[0], $data);
+        $start = $this->evalAggExpression($operands[1], $data);
+        $length = $this->evalAggExpression($operands[2], $data);
+
+        if (!is_string($string)) {
+            throw new SyntaxError('$substrBytes: first argument must resolve to a string');
+        }
+        if (!is_int($start)) {
+            throw new SyntaxError('$substrBytes: second argument must resolve to an integer');
+        }
+        if (!is_int($length)) {
+            throw new SyntaxError('$substrBytes: third argument must resolve to an integer');
+        }
+
+        if ($length < 0) {
+            return substr($string, $start);
+        }
+
+        return substr($string, $start, $length);
+    }
+
+    /**
+     * Evaluates the $strLenBytes aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/strLenBytes/
+     *
+     * Returns the number of bytes in a string.
+     *
+     * Syntax: { $strLenBytes: <expression> }
+     *
+     * @param mixed $operand Expression that resolves to a string
+     * @param array $data The data context
+     * @return int The byte length of the string
+     */
+    private function evalAggStrLenBytes(mixed $operand, array $data): int
+    {
+        $value = $this->evalAggExpression($operand, $data);
+
+        if (!is_string($value)) {
+            throw new SyntaxError('$strLenBytes: argument must resolve to a string');
+        }
+
+        return strlen($value);
+    }
+
+    /**
+     * Evaluates the $strLenCP aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/strLenCP/
+     *
+     * Returns the number of UTF-8 codepoints in a string.
+     *
+     * Syntax: { $strLenCP: <expression> }
+     *
+     * @param mixed $operand Expression that resolves to a string
+     * @param array $data The data context
+     * @return int The codepoint length of the string
+     */
+    private function evalAggStrLenCP(mixed $operand, array $data): int
+    {
+        $value = $this->evalAggExpression($operand, $data);
+
+        if (!is_string($value)) {
+            throw new SyntaxError('$strLenCP: argument must resolve to a string');
+        }
+
+        return mb_strlen($value);
+    }
+
+    /**
+     * Evaluates the $trim aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/trim/
+     *
+     * Removes whitespace or specified characters from the beginning and end of a string.
+     *
+     * Syntax: { $trim: { input: <string>, chars: <string> } }
+     *
+     * @param mixed $operand Object with input and optional chars
+     * @param array $data The data context
+     * @return string The trimmed string
+     */
+    private function evalAggTrim(mixed $operand, array $data): string
+    {
+        return $this->evalTrimOperation($operand, $data, '$trim', 'trim');
+    }
+
+    /**
+     * Evaluates the $ltrim aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/ltrim/
+     *
+     * Removes whitespace or specified characters from the beginning of a string.
+     *
+     * Syntax: { $ltrim: { input: <string>, chars: <string> } }
+     *
+     * @param mixed $operand Object with input and optional chars
+     * @param array $data The data context
+     * @return string The trimmed string
+     */
+    private function evalAggLtrim(mixed $operand, array $data): string
+    {
+        return $this->evalTrimOperation($operand, $data, '$ltrim', 'ltrim');
+    }
+
+    /**
+     * Evaluates the $rtrim aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/rtrim/
+     *
+     * Removes whitespace or specified characters from the end of a string.
+     *
+     * Syntax: { $rtrim: { input: <string>, chars: <string> } }
+     *
+     * @param mixed $operand Object with input and optional chars
+     * @param array $data The data context
+     * @return string The trimmed string
+     */
+    private function evalAggRtrim(mixed $operand, array $data): string
+    {
+        return $this->evalTrimOperation($operand, $data, '$rtrim', 'rtrim');
+    }
+
+    /**
+     * Helper for trim operations
+     */
+    private function evalTrimOperation(mixed $operand, array $data, string $opName, string $phpFunc): string
+    {
+        if (!is_array($operand) || array_is_list($operand)) {
+            throw new SyntaxError("{$opName} requires an object with 'input' property");
+        }
+
+        if (!array_key_exists('input', $operand)) {
+            throw new SyntaxError("{$opName} requires 'input' property");
+        }
+
+        $input = $this->evalAggExpression($operand['input'], $data);
+
+        if (!is_string($input)) {
+            throw new SyntaxError("{$opName}: 'input' must resolve to a string");
+        }
+
+        if (array_key_exists('chars', $operand)) {
+            $chars = $this->evalAggExpression($operand['chars'], $data);
+            if (!is_string($chars)) {
+                throw new SyntaxError("{$opName}: 'chars' must resolve to a string");
+            }
+            return $phpFunc($input, $chars);
+        }
+
+        return $phpFunc($input);
+    }
+
+    /**
+     * Evaluates the $concat aggregation operator
+     *
+     * MongoDB Spec: https://www.mongodb.com/docs/manual/reference/operator/aggregation/concat/
+     *
+     * Concatenates strings and returns the concatenated string.
+     *
+     * Syntax: { $concat: [ <expression1>, <expression2>, ... ] }
+     *
+     * @param mixed $operands Array of string expressions
+     * @param array $data The data context
+     * @return string The concatenated string
+     */
+    private function evalAggConcat(mixed $operands, array $data): string
+    {
+        if (!is_array($operands) || !array_is_list($operands)) {
+            throw new SyntaxError('$concat requires an array of string expressions');
+        }
+
+        $result = '';
+        foreach ($operands as $operand) {
+            $value = $this->evalAggExpression($operand, $data);
+            if (!is_string($value)) {
+                throw new SyntaxError('$concat: all arguments must resolve to strings');
+            }
+            $result .= $value;
+        }
+
+        return $result;
     }
 }
