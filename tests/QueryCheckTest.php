@@ -1649,4 +1649,106 @@ class QueryCheckTest extends TestCase
         ]);
         $this->assertTrue($qc->test(['dummy' => 'value']));
     }
+
+    // ARRAY INDEX ACCESS TESTS
+
+    #[TestDox('$expr with array index access // $myArray[0] and $myList[0].amount')]
+    public function testExprArrayIndexAccess(): void
+    {
+        $vars = [
+            'myArray' => [10, 20, 30],
+            'myList' => [
+                ['amount' => 100, 'name' => 'first'],
+                ['amount' => 200, 'name' => 'second'],
+            ],
+        ];
+
+        // Test simple array index access
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => ['$myArray[0]', 10]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+
+        // Test nested array index with property access
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => ['$myList[0].amount', 100]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+
+        // Test comparison between array elements
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$lt' => ['$myList[0].amount', '$myList[1].amount']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars)); // 100 < 200
+
+        // Test arithmetic with array indexed values
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => [
+                    ['$add' => ['$myArray[0]', '$myArray[1]']],
+                    30
+                ]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars)); // 10 + 20 = 30
+    }
+
+    #[TestDox('$expr with deeply nested array index access // $myObj.sub1.sub2.myList[0].amount')]
+    public function testExprDeeplyNestedArrayIndexAccess(): void
+    {
+        $vars = [
+            'myObj' => [
+                'sub1' => [
+                    'sub2' => [
+                        'myList' => [
+                            ['amount' => 42, 'name' => 'first'],
+                            ['amount' => 99, 'name' => 'second'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => ['$myObj.sub1.sub2.myList[0].amount', 42]
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => ['$myObj.sub1.sub2.myList[1].name', 'second']
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+    }
+
+    #[TestDox('$expr with $and // check $size >= 1 before accessing myList[0]')]
+    public function testExprAndWithSizeAndArrayAccess(): void
+    {
+        $vars = [
+            'myList' => [
+                ['amount' => 100, 'name' => 'first'],
+            ],
+        ];
+
+        $qc = new QueryCheck([
+            '$and' => [
+                ['$expr' => ['$gte' => [['$size' => '$myList'], 1]]],
+                ['$expr' => ['$eq' => ['$myList[0].amount', 100]]],
+            ]
+        ]);
+        $this->assertTrue($qc->test($vars));
+
+        // Test with empty array - short-circuits on first condition, never accesses myList[0]
+        $varsEmpty = ['myList' => []];
+        $this->assertFalse($qc->test($varsEmpty));
+    }
 }

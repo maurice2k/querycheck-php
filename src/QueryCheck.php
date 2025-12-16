@@ -283,13 +283,13 @@ class QueryCheck
             throw new SyntaxError('$and can only operate on arrays of queries');
         }
 
-        $result = true;
         foreach ($query as $item) {
-            // keep this sorting ('&& $result' at the end)
-            $result = $this->evalQuery($item, $data) && $result;
+            if (!$this->evalQuery($item, $data)) {
+                return false;
+            }
         }
 
-        return $result;
+        return true;
     }
 
     /**
