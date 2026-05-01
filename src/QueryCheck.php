@@ -15,14 +15,19 @@ use Maurice2k\QueryCheck\Exception\UnknownVariableException;
  */
 class QueryCheck
 {
+    /** @var array<mixed> */
     private array $query;
+    /** @var array<string, \Closure> */
     private array $logicalOperators;
+    /** @var array<string, \Closure> */
     private array $queryOperators;
+    /** @var array<string, \Closure> */
     private array $aggregationOperators;
     private bool $undefinedEqualsNull = false;
     private bool $strictMode = false;
     private ?\Closure $operandEvaluator = null;
 
+    /** @param array<mixed> $query */
     public function __construct(array $query)
     {
         $this->query = $query;
@@ -103,6 +108,9 @@ class QueryCheck
         return $this->evalQuery($this->query, $data);
     }
 
+    /**
+     * @param array<mixed> $data
+     */
     private function evalQuery(mixed $query, array $data): bool
     {
         if (!is_array($query)) {
@@ -174,6 +182,9 @@ class QueryCheck
         }
     }
 
+    /**
+     * @param array<mixed> $data
+     */
     private function evalQueryExpression(string $variableName, mixed $variableValue, mixed $expression, array $data): bool
     {
         if (is_array($expression) && array_is_list($expression) || $expression === null || !is_array($expression)) {
@@ -209,6 +220,9 @@ class QueryCheck
         return $result;
     }
 
+    /**
+     * @param array<mixed> $data
+     */
     public function getVariableValue(string $variableName, array $data): mixed
     {
         $str = str_replace('[', '.[', $variableName);
@@ -256,7 +270,7 @@ class QueryCheck
      * Syntax: { $or: [ <expression1>, <expression2>, ... ] }
      *
      * @param mixed $query Array of query expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool True if at least one expression matches, false otherwise
      */
     private function evalOr(mixed $query, array $data): bool
@@ -284,7 +298,7 @@ class QueryCheck
      * Syntax: { $and: [ <expression1>, <expression2>, ... ] }
      *
      * @param mixed $query Array of query expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool True if all expressions match, false otherwise
      */
     private function evalAnd(mixed $query, array $data): bool
@@ -609,6 +623,10 @@ class QueryCheck
         return false;
     }
 
+    /**
+     * @param array<mixed> $a
+     * @param array<mixed> $b
+     */
     private function isEqualObject(array $a, array $b): bool
     {
         $aKeys = array_keys($a);
@@ -639,7 +657,7 @@ class QueryCheck
      * Syntax: { $expr: <aggregation expression> }
      *
      * @param mixed $expression Aggregation expression to evaluate
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool The boolean result of the expression
      */
     private function evalExpr(mixed $expression, array $data): bool
@@ -654,6 +672,9 @@ class QueryCheck
         return (bool)$result;
     }
 
+    /**
+     * @param array<mixed> $data
+     */
     private function evalAggExpression(mixed $expression, array $data): mixed
     {
         // Allow operandEvaluator to transform expressions first
@@ -690,9 +711,6 @@ class QueryCheck
 
         // Handle aggregation operators
         $keys = array_keys($expression);
-        if (count($keys) === 0) {
-            return $expression;
-        }
 
         $firstKey = $keys[0];
 
@@ -713,6 +731,7 @@ class QueryCheck
 
     /**
      * Helper method to extract exactly 2 operands for binary operators
+     * @param array<mixed> $data
      * @return array{mixed, mixed}
      */
     private function getBinaryOperands(mixed $operands, string $operator, array $data): array
@@ -740,7 +759,7 @@ class QueryCheck
      * Syntax: { $add: [ <expression1>, <expression2>, ... ] }
      *
      * @param mixed $operands Array of numeric expressions to add
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return int|float The sum of all operands
      */
     private function evalAggAdd(mixed $operands, array $data): int|float
@@ -771,7 +790,7 @@ class QueryCheck
      * Syntax: { $subtract: [ <expression1>, <expression2> ] }
      *
      * @param mixed $operands Array with exactly two numeric expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return int|float The difference between the two operands
      */
     private function evalAggSubtract(mixed $operands, array $data): int|float
@@ -795,7 +814,7 @@ class QueryCheck
      * Syntax: { $multiply: [ <expression1>, <expression2>, ... ] }
      *
      * @param mixed $operands Array of numeric expressions to multiply
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return int|float The product of all operands
      */
     private function evalAggMultiply(mixed $operands, array $data): int|float
@@ -825,7 +844,7 @@ class QueryCheck
      * Syntax: { $divide: [ <expression1>, <expression2> ] }
      *
      * @param mixed $operands Array with exactly two numeric expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return int|float The quotient of the division
      */
     private function evalAggDivide(mixed $operands, array $data): int|float
@@ -853,10 +872,10 @@ class QueryCheck
      * Syntax: { $mod: [ <expression1>, <expression2> ] }
      *
      * @param mixed $operands Array with exactly two numeric expressions
-     * @param array $data The data context
-     * @return int|float The remainder of the division
+     * @param array<mixed> $data The data context
+     * @return int The remainder of the division
      */
-    private function evalAggMod(mixed $operands, array $data): int|float
+    private function evalAggMod(mixed $operands, array $data): int
     {
         [$value1, $value2] = $this->getBinaryOperands($operands, '$mod', $data);
 
@@ -881,7 +900,7 @@ class QueryCheck
      * Syntax: { $eq: [ <expression1>, <expression2> ] }
      *
      * @param mixed $operands Array with exactly two expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool True if values are equal, false otherwise
      */
     private function evalAggEq(mixed $operands, array $data): bool
@@ -900,7 +919,7 @@ class QueryCheck
      * Syntax: { $ne: [ <expression1>, <expression2> ] }
      *
      * @param mixed $operands Array with exactly two expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool True if values are not equal, false otherwise
      */
     private function evalAggNe(mixed $operands, array $data): bool
@@ -919,7 +938,7 @@ class QueryCheck
      * Syntax: { $gt: [ <expression1>, <expression2> ] }
      *
      * @param mixed $operands Array with exactly two expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool True if first value is greater than second, false otherwise
      */
     private function evalAggGt(mixed $operands, array $data): bool
@@ -938,7 +957,7 @@ class QueryCheck
      * Syntax: { $gte: [ <expression1>, <expression2> ] }
      *
      * @param mixed $operands Array with exactly two expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool True if first value is greater than or equal to second, false otherwise
      */
     private function evalAggGte(mixed $operands, array $data): bool
@@ -957,7 +976,7 @@ class QueryCheck
      * Syntax: { $lt: [ <expression1>, <expression2> ] }
      *
      * @param mixed $operands Array with exactly two expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool True if first value is less than second, false otherwise
      */
     private function evalAggLt(mixed $operands, array $data): bool
@@ -976,7 +995,7 @@ class QueryCheck
      * Syntax: { $lte: [ <expression1>, <expression2> ] }
      *
      * @param mixed $operands Array with exactly two expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool True if first value is less than or equal to second, false otherwise
      */
     private function evalAggLte(mixed $operands, array $data): bool
@@ -995,7 +1014,7 @@ class QueryCheck
      * Syntax: { $cond: { if: <boolean-expression>, then: <true-case>, else: <false-case> } }
      *
      * @param mixed $operands Object with 'if', 'then', and 'else' properties
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return mixed The result of either 'then' or 'else' expression
      */
     private function evalAggCond(mixed $operands, array $data): mixed
@@ -1033,7 +1052,7 @@ class QueryCheck
      * Syntax: { $not: [ <expression> ] }
      *
      * @param mixed $operands Array with exactly one expression
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool The negated boolean result
      */
     private function evalAggNot(mixed $operands, array $data): bool
@@ -1046,7 +1065,7 @@ class QueryCheck
 
         // MongoDB behavior: false, null, 0, and undefined evaluate as false
         // All other values (including non-zero numbers and arrays) evaluate as true
-        if ($value === false || $value === null || $value === 0) {
+        if ($value === false || $value === null || $value === 0 || $value === 0.0) {
             return true;
         }
 
@@ -1063,7 +1082,7 @@ class QueryCheck
      * Syntax: { $in: [ <expression>, <array expression> ] }
      *
      * @param mixed $operands Array with exactly two elements: [value, array]
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return bool True if value is found in array, false otherwise
      */
     private function evalAggIn(mixed $operands, array $data): bool
@@ -1093,7 +1112,7 @@ class QueryCheck
      * Syntax: { $size: <expression> }
      *
      * @param mixed $operand Expression that resolves to an array
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return int The number of elements in the array
      */
     private function evalAggSize(mixed $operand, array $data): int
@@ -1117,7 +1136,7 @@ class QueryCheck
      * Syntax: { $toLower: <expression> }
      *
      * @param mixed $operand Expression that resolves to a string
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return string The lowercase string
      */
     private function evalAggToLower(mixed $operand, array $data): string
@@ -1141,7 +1160,7 @@ class QueryCheck
      * Syntax: { $toUpper: <expression> }
      *
      * @param mixed $operand Expression that resolves to a string
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return string The uppercase string
      */
     private function evalAggToUpper(mixed $operand, array $data): string
@@ -1166,7 +1185,7 @@ class QueryCheck
      * Syntax: { $substr: [ <string>, <start>, <length> ] }
      *
      * @param mixed $operands Array with string, start index, and length
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return string The substring
      */
     private function evalAggSubstr(mixed $operands, array $data): string
@@ -1207,7 +1226,7 @@ class QueryCheck
      * Syntax: { $substrBytes: [ <string>, <start>, <length> ] }
      *
      * @param mixed $operands Array with string, start byte index, and byte length
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return string The substring
      */
     private function evalAggSubstrBytes(mixed $operands, array $data): string
@@ -1247,7 +1266,7 @@ class QueryCheck
      * Syntax: { $strLenBytes: <expression> }
      *
      * @param mixed $operand Expression that resolves to a string
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return int The byte length of the string
      */
     private function evalAggStrLenBytes(mixed $operand, array $data): int
@@ -1271,7 +1290,7 @@ class QueryCheck
      * Syntax: { $strLenCP: <expression> }
      *
      * @param mixed $operand Expression that resolves to a string
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return int The codepoint length of the string
      */
     private function evalAggStrLenCP(mixed $operand, array $data): int
@@ -1295,12 +1314,12 @@ class QueryCheck
      * Syntax: { $trim: { input: <string>, chars: <string> } }
      *
      * @param mixed $operand Object with input and optional chars
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return string The trimmed string
      */
     private function evalAggTrim(mixed $operand, array $data): string
     {
-        return $this->evalTrimOperation($operand, $data, '$trim', 'trim');
+        return $this->evalTrimOperation($operand, $data, '$trim', trim(...));
     }
 
     /**
@@ -1313,12 +1332,12 @@ class QueryCheck
      * Syntax: { $ltrim: { input: <string>, chars: <string> } }
      *
      * @param mixed $operand Object with input and optional chars
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return string The trimmed string
      */
     private function evalAggLtrim(mixed $operand, array $data): string
     {
-        return $this->evalTrimOperation($operand, $data, '$ltrim', 'ltrim');
+        return $this->evalTrimOperation($operand, $data, '$ltrim', ltrim(...));
     }
 
     /**
@@ -1331,18 +1350,19 @@ class QueryCheck
      * Syntax: { $rtrim: { input: <string>, chars: <string> } }
      *
      * @param mixed $operand Object with input and optional chars
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return string The trimmed string
      */
     private function evalAggRtrim(mixed $operand, array $data): string
     {
-        return $this->evalTrimOperation($operand, $data, '$rtrim', 'rtrim');
+        return $this->evalTrimOperation($operand, $data, '$rtrim', rtrim(...));
     }
 
     /**
      * Helper for trim operations
+     * @param array<mixed> $data
      */
-    private function evalTrimOperation(mixed $operand, array $data, string $opName, string $phpFunc): string
+    private function evalTrimOperation(mixed $operand, array $data, string $opName, \Closure $phpFunc): string
     {
         if (!is_array($operand) || array_is_list($operand)) {
             throw new SyntaxError("{$opName} requires an object with 'input' property");
@@ -1379,7 +1399,7 @@ class QueryCheck
      * Syntax: { $concat: [ <expression1>, <expression2>, ... ] }
      *
      * @param mixed $operands Array of string expressions
-     * @param array $data The data context
+     * @param array<mixed> $data The data context
      * @return string The concatenated string
      */
     private function evalAggConcat(mixed $operands, array $data): string

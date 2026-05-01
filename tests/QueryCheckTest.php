@@ -13,6 +13,7 @@ use PHPUnit\Framework\TestCase;
 
 class QueryCheckTest extends TestCase
 {
+    /** @var array<string, mixed> */
     private array $vars;
 
     protected function setUp(): void
@@ -766,7 +767,7 @@ class QueryCheckTest extends TestCase
 
     private function createOpEvaluator(QueryCheck $qc): \Closure
     {
-        $opEvaluator = null;
+        $opEvaluator = static fn($operand, $data) => $operand;
 
         $concatFunc = function ($params, $data) use (&$opEvaluator) {
             if (!is_array($params)) {
@@ -789,7 +790,7 @@ class QueryCheckTest extends TestCase
 
             $key = $opEvaluator($params['key'], $data);
 
-            if (!isset($params['map']) || $params['map'] === null || !is_array($params['map'])) {
+            if (!isset($params['map']) || !is_array($params['map'])) {
                 return $default;
             }
 
@@ -800,7 +801,6 @@ class QueryCheckTest extends TestCase
 
         $varFunc = function ($params, $data) use ($qc) {
             if (is_string($params)) {
-                // shortcut syntax {"$var": "varName"}
                 $params = ['name' => $params];
             } elseif (!isset($params['name'])) {
                 return null;
@@ -816,13 +816,13 @@ class QueryCheckTest extends TestCase
         ];
 
         $opEvaluator = function ($operand, $data) use ($opEvalFuncs) {
-            $isObject = is_array($operand) && !array_is_list($operand) && $operand !== null;
+            $isObject = is_array($operand) && !array_is_list($operand);
             if (!$isObject) {
                 return $operand;
             }
 
-            $firstKey = array_keys($operand)[0] ?? null;
-            if ($firstKey !== null && isset($opEvalFuncs[$firstKey])) {
+            $firstKey = array_keys($operand)[0];
+            if (isset($opEvalFuncs[$firstKey])) {
                 return $opEvalFuncs[$firstKey]($operand[$firstKey], $data);
             }
 
@@ -1183,6 +1183,18 @@ class QueryCheckTest extends TestCase
         $qc = new QueryCheck([
             '$expr' => [
                 '$not' => [0]
+            ]
+        ]);
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$expr with $not // $not[0.0] returns true (float zero is falsy in MongoDB)')]
+    public function testExprAggNotFloatZero(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$not' => [0.0]
             ]
         ]);
         $qc->setStrictMode(false);

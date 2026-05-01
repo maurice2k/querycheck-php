@@ -1,6 +1,6 @@
 # QueryCheck for PHP
 
-*QueryCheck* is a logical JSON query evaluator which uses the [MongoDB query style](https://docs.mongodb.com/manual/tutorial/query-documents/).
+*QueryCheck* is a logical JSON query evaluator which uses the [MongoDB™ query style](https://docs.mongodb.com/manual/tutorial/query-documents/).
 
 This is a PHP 8.3+ port of the original [JavaScript/Node.js querycheck package](https://github.com/maurice2k/querycheck).
 
@@ -271,11 +271,26 @@ $qc->setOperandEvaluator(function($operand, $data) use ($qc) {
 
 ## Testing
 
-Run the test suite:
+Run the test suite locally:
 
 ```bash
 composer install
 ./vendor/bin/phpunit
+```
+
+Run static analysis:
+
+```bash
+./vendor/bin/phpstan analyse --memory-limit=512M
+```
+
+Or with Docker (tests PHP 8.3, 8.4, and 8.5):
+
+```bash
+make test        # run tests on all 3 PHP versions
+make test-83     # run tests on PHP 8.3 only
+make phpstan     # run PHPStan in PHP 8.5 container
+make build       # build all Docker images
 ```
 
 ## License

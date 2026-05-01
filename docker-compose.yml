@@ -1,0 +1,27 @@
+services:
+  php83:
+    build:
+      context: .
+      args:
+        PHP_VERSION: "8.3"
+    volumes:
+      - ./tests:/app/tests:ro
+      - ./src:/app/src:ro
+
+  php84:
+    build:
+      context: .
+      args:
+        PHP_VERSION: "8.4"
+    volumes:
+      - ./tests:/app/tests:ro
+      - ./src:/app/src:ro
+
+  php85:
+    build:
+      context: .
+      args:
+        PHP_VERSION: "8.5"
+    volumes:
+      - ./tests:/app/tests:ro
+      - ./src:/app/src:ro
