@@ -88,6 +88,40 @@ class QueryCheckTest extends TestCase
         $this->assertTrue($qc->test($this->vars));
     }
 
+    #[TestDox('setThrowOnUnknownVariable(false) does not throw and missing compares as null')]
+    public function testThrowOnUnknownVariableCanBeDisabled(): void
+    {
+        $qc = new QueryCheck(['myUndefined' => 'some string']);
+        $qc->setThrowOnUnknownVariable(false);
+        $this->assertFalse($qc->test($this->vars));
+
+        $qc = new QueryCheck(['myUndefined' => null]);
+        $qc->setThrowOnUnknownVariable(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('setThrowOnUnknownVariable(true) throws UnknownVariableException')]
+    public function testThrowOnUnknownVariableCanBeEnabled(): void
+    {
+        $qc = new QueryCheck(['myObject.myUndefined' => 'some string']);
+        $qc->setThrowOnUnknownVariable(true);
+        $this->expectException(UnknownVariableException::class);
+        $this->expectExceptionMessage("Variable 'myObject.myUndefined' is not defined");
+        $qc->test($this->vars);
+    }
+
+    #[TestDox('$expr missing field does not throw when setThrowOnUnknownVariable(false)')]
+    public function testExprMissingFieldDoesNotThrowWhenDisabled(): void
+    {
+        $qc = new QueryCheck([
+            '$expr' => [
+                '$eq' => ['$missing', null],
+            ],
+        ]);
+        $qc->setThrowOnUnknownVariable(false);
+        $this->assertTrue($qc->test(['other' => 1]));
+    }
+
     #[TestDox('$eq short syntax non-existant sub-variable // undefined throws exception')]
     public function testEqShortSyntaxNonExistantSubVariableUndefinedThrowsException(): void
     {
@@ -97,12 +131,12 @@ class QueryCheckTest extends TestCase
         $qc->test($this->vars);
     }
 
-    #[TestDox('$eq short syntax non-existant sub-variable // undefined == null with setUndefinedEqualsNull(true)')]
-    public function testEqShortSyntaxNonExistantSubVariableUndefinedEqualsNullWithFlag(): void
+    #[TestDox('$eq short syntax non-existant sub-variable // undefined == null with setThrowOnUnknownVariable(false)')]
+    public function testEqShortSyntaxNonExistantSubVariableUndefinedIsNullWhenNotThrowing(): void
     {
         $qc = new QueryCheck(['myObject.myUndefined' => null]);
         $qc->setStrictMode(false);
-        $qc->setUndefinedEqualsNull(true);
+        $qc->setThrowOnUnknownVariable(false);
         $this->assertTrue($qc->test($this->vars));
     }
 
@@ -179,12 +213,12 @@ class QueryCheckTest extends TestCase
         $qc->test($this->vars);
     }
 
-    #[TestDox('$eq short syntax // undefined == null with setUndefinedEqualsNull(true)')]
-    public function testEqShortSyntaxUndefinedEqualsNullWithFlag(): void
+    #[TestDox('$eq short syntax // undefined == null with setThrowOnUnknownVariable(false)')]
+    public function testEqShortSyntaxUndefinedIsNullWhenNotThrowing(): void
     {
         $qc = new QueryCheck(['myUndefined' => null]);
         $qc->setStrictMode(false);
-        $qc->setUndefinedEqualsNull(true);
+        $qc->setThrowOnUnknownVariable(false);
         $this->assertTrue($qc->test($this->vars));
     }
 
@@ -204,39 +238,39 @@ class QueryCheckTest extends TestCase
         $this->assertTrue($qc->test($this->vars));
     }
 
-    #[TestDox('$eq short syntax // array[20] == null with setUndefinedEqualsNull(true)')]
+    #[TestDox('$eq short syntax // array[20] == null with setThrowOnUnknownVariable(false)')]
     public function testEqShortSyntaxArrayOutOfBoundsEqualsNullWithFlag(): void
     {
         $qc = new QueryCheck(['myArrayOfObjects[20]' => null]);
         $qc->setStrictMode(false);
-        $qc->setUndefinedEqualsNull(true);
+        $qc->setThrowOnUnknownVariable(false);
         $this->assertTrue($qc->test($this->vars));
     }
 
-    #[TestDox('$eq short syntax // array[20].a.b.c.d == null with setUndefinedEqualsNull(true)')]
+    #[TestDox('$eq short syntax // array[20].a.b.c.d == null with setThrowOnUnknownVariable(false)')]
     public function testEqShortSyntaxArrayDeepNonExistantEqualsNullWithFlag(): void
     {
         $qc = new QueryCheck(['myArrayOfObjects[20].a.b.c.d' => null]);
         $qc->setStrictMode(false);
-        $qc->setUndefinedEqualsNull(true);
+        $qc->setThrowOnUnknownVariable(false);
         $this->assertTrue($qc->test($this->vars));
     }
 
-    #[TestDox('$eq short syntax // myNull.but.this.does.not.exist == null with setUndefinedEqualsNull(true)')]
+    #[TestDox('$eq short syntax // myNull.but.this.does.not.exist == null with setThrowOnUnknownVariable(false)')]
     public function testEqShortSyntaxNullPropertyNonExistantEqualsNullWithFlag(): void
     {
         $qc = new QueryCheck(['myNull.but.this.does.not.exist' => null]);
         $qc->setStrictMode(false);
-        $qc->setUndefinedEqualsNull(true);
+        $qc->setThrowOnUnknownVariable(false);
         $this->assertTrue($qc->test($this->vars));
     }
 
-    #[TestDox('$eq short syntax // myInt.but.this.does.not.exist == null with setUndefinedEqualsNull(true)')]
+    #[TestDox('$eq short syntax // myInt.but.this.does.not.exist == null with setThrowOnUnknownVariable(false)')]
     public function testEqShortSyntaxIntPropertyNonExistantEqualsNullWithFlag(): void
     {
         $qc = new QueryCheck(['myInt.but.this.does.not.exist' => null]);
         $qc->setStrictMode(false);
-        $qc->setUndefinedEqualsNull(true);
+        $qc->setThrowOnUnknownVariable(false);
         $this->assertTrue($qc->test($this->vars));
     }
 
@@ -576,12 +610,12 @@ class QueryCheckTest extends TestCase
         $qc->test($this->vars);
     }
 
-    #[TestDox('[STRICT] $eq short syntax non-existant sub-variable // undefined == null with setUndefinedEqualsNull(true)')]
-    public function testStrictEqShortSyntaxNonExistantSubVariableUndefinedEqualsNullWithFlag(): void
+    #[TestDox('[STRICT] $eq short syntax non-existant sub-variable // undefined == null with setThrowOnUnknownVariable(false)')]
+    public function testStrictEqShortSyntaxNonExistantSubVariableUndefinedIsNullWhenNotThrowing(): void
     {
         $qc = new QueryCheck(['myObject.myUndefined' => null]);
         $qc->setStrictMode(true);
-        $qc->setUndefinedEqualsNull(true);
+        $qc->setThrowOnUnknownVariable(false);
         $this->assertTrue($qc->test($this->vars));
     }
 
@@ -621,18 +655,30 @@ class QueryCheckTest extends TestCase
         $qc->test($this->vars);
     }
 
-    #[TestDox('[STRICT] $ne full syntax // int[137] != string["138"]')]
+    #[TestDox('[STRICT] $ne full syntax // int[137] != string["138"] throws, like $eq')]
     public function testStrictNeFullSyntaxIntNotEqualsString138(): void
     {
         $qc = new QueryCheck(['myInt' => ['$ne' => '138']]);
         $qc->setStrictMode(true);
-        $this->assertTrue($qc->test($this->vars));
+        $this->expectException(StrictTypeError::class);
+        $this->expectExceptionMessage('$ne: variable myInt is of type integer while operand is of type string');
+        $qc->test($this->vars);
     }
 
-    #[TestDox('[STRICT] $ne full syntax // int[137] != string["137"]')]
+    #[TestDox('[STRICT] $ne full syntax // int[137] != string["137"] throws, like $eq')]
     public function testStrictNeFullSyntaxIntNotEqualsString137(): void
     {
         $qc = new QueryCheck(['myInt' => ['$ne' => '137']]);
+        $qc->setStrictMode(true);
+        $this->expectException(StrictTypeError::class);
+        $this->expectExceptionMessage('$ne: variable myInt is of type integer while operand is of type string');
+        $qc->test($this->vars);
+    }
+
+    #[TestDox('[STRICT] $ne full syntax // int[137] != int[138] still works')]
+    public function testStrictNeFullSyntaxIntNotEqualsInt138(): void
+    {
+        $qc = new QueryCheck(['myInt' => ['$ne' => 138]]);
         $qc->setStrictMode(true);
         $this->assertTrue($qc->test($this->vars));
     }
@@ -719,6 +765,60 @@ class QueryCheckTest extends TestCase
     }
 
     // OPERAND EVALUATOR TESTS
+
+    #[TestDox('$time function returns given date')]
+    public function testTimeFunctionReturnsGivenDate(): void
+    {
+        $qc = new QueryCheck(['now.isoDateTime' => ['$time' => ['date' => '2020-05-21T13:59:48']]]);
+        $qc->setOperandEvaluator($this->createOpEvaluator($qc));
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$time function returns given date using different input format')]
+    public function testTimeFunctionReturnsGivenDateUsingInputFormat(): void
+    {
+        $qc = new QueryCheck(['now.isoDateTime' => ['$time' => ['date' => '21.05.2020, 13:59:48', 'inputFormat' => 'dd.MM.yyyy, HH:mm:ss']]]);
+        $qc->setOperandEvaluator($this->createOpEvaluator($qc));
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$time function returns modified date (-2 days and -3 hours)')]
+    public function testTimeFunctionReturnsModifiedDate(): void
+    {
+        $qc = new QueryCheck(['now.isoDateTime' => ['$time' => ['date' => '2020-05-23T16:59:48', 'sub' => ['days' => 2, 'hours' => 3]]]]);
+        $qc->setOperandEvaluator($this->createOpEvaluator($qc));
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$time function cascading (+10 days and -10 days)')]
+    public function testTimeFunctionCascading(): void
+    {
+        $qc = new QueryCheck(['now.isoDateTime' => ['$time' => ['date' => ['$time' => ['date' => '2020-05-21T13:59:48', 'sub' => ['days' => 10]]], 'add' => ['days' => 10]]]]);
+        $qc->setOperandEvaluator($this->createOpEvaluator($qc));
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$time function cascading (+10 days and -10 days) combined with $var function')]
+    public function testTimeFunctionCascadingWithVar(): void
+    {
+        $qc = new QueryCheck(['now.isoDateTime' => ['$time' => ['date' => ['$time' => ['date' => ['$var' => ['name' => 'now.isoDateTime']], 'sub' => ['days' => 10]]], 'add' => ['days' => 10]]]]);
+        $qc->setOperandEvaluator($this->createOpEvaluator($qc));
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
+
+    #[TestDox('$concat function with string and $var (all of type string)')]
+    public function testConcatFunctionWithStrings(): void
+    {
+        $qc = new QueryCheck(['now.isoDateTime' => ['$concat' => [['$var' => ['name' => 'now.isoDate']], 'T', ['$var' => ['name' => 'now.isoTime']]]]]);
+        $qc->setOperandEvaluator($this->createOpEvaluator($qc));
+        $qc->setStrictMode(false);
+        $this->assertTrue($qc->test($this->vars));
+    }
 
     #[TestDox('$concat function with string and $var (with string casting)')]
     public function testConcatFunctionWithStringCasting(): void
@@ -809,7 +909,45 @@ class QueryCheckTest extends TestCase
             return $qc->getVariableValue($params['name'], $data);
         };
 
+        $timeFunc = function ($params, $data) use (&$opEvaluator) {
+            if (is_array($params) && array_key_exists('date', $params)) {
+                $params['date'] = $opEvaluator($params['date'], $data);
+            }
+
+            $date = $params['date'] ?? null;
+            if (is_string($date)) {
+                $inputFormat = $params['inputFormat'] ?? '';
+                if (is_string($inputFormat) && $inputFormat !== '') {
+                    $dateLocal = \DateTimeImmutable::createFromFormat(
+                        $this->convertDateFnsFormat($inputFormat),
+                        $date
+                    );
+                    if ($dateLocal === false) {
+                        throw new \RuntimeException('Unable to parse date: ' . $date);
+                    }
+                } else {
+                    $dateLocal = new \DateTimeImmutable($date);
+                }
+            } else {
+                $dateLocal = new \DateTimeImmutable();
+            }
+
+            if (isset($params['sub']) && is_array($params['sub'])) {
+                $dateLocal = $dateLocal->sub($this->dateIntervalFromParts($params['sub']));
+            } elseif (isset($params['add']) && is_array($params['add'])) {
+                $dateLocal = $dateLocal->add($this->dateIntervalFromParts($params['add']));
+            }
+
+            $format = $params['format'] ?? "yyyy-MM-dd'T'HH:mm:ss";
+            if (!is_string($format)) {
+                $format = "yyyy-MM-dd'T'HH:mm:ss";
+            }
+
+            return $dateLocal->format($this->convertDateFnsFormat($format));
+        };
+
         $opEvalFuncs = [
+            '$time' => $timeFunc,
             '$concat' => $concatFunc,
             '$lookup' => $lookupFunc,
             '$var' => $varFunc,
@@ -830,6 +968,89 @@ class QueryCheckTest extends TestCase
         };
 
         return $opEvaluator;
+    }
+
+    /**
+     * Convert the date-fns tokens used by the JavaScript tests into PHP date() tokens.
+     */
+    private function convertDateFnsFormat(string $format): string
+    {
+        $result = '';
+        $length = strlen($format);
+        $quoted = false;
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $format[$i];
+            if ($char === "'") {
+                if ($quoted && ($i + 1) < $length && $format[$i + 1] === "'") {
+                    $result .= "\\'";
+                    $i++;
+                    continue;
+                }
+                $quoted = !$quoted;
+                continue;
+            }
+
+            if ($quoted) {
+                $result .= '\\' . $char;
+                continue;
+            }
+
+            $rest = substr($format, $i);
+            if (str_starts_with($rest, 'yyyy')) {
+                $result .= 'Y';
+                $i += 3;
+                continue;
+            }
+            if (str_starts_with($rest, 'MM')) {
+                $result .= 'm';
+                $i += 1;
+                continue;
+            }
+            if (str_starts_with($rest, 'dd')) {
+                $result .= 'd';
+                $i += 1;
+                continue;
+            }
+            if (str_starts_with($rest, 'HH')) {
+                $result .= 'H';
+                $i += 1;
+                continue;
+            }
+            if (str_starts_with($rest, 'mm')) {
+                $result .= 'i';
+                $i += 1;
+                continue;
+            }
+            if (str_starts_with($rest, 'ss')) {
+                $result .= 's';
+                $i += 1;
+                continue;
+            }
+
+            $result .= ctype_alpha($char) ? '\\' . $char : $char;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, int> $parts
+     */
+    private function dateIntervalFromParts(array $parts): \DateInterval
+    {
+        $days = (int)($parts['days'] ?? 0) + 7 * (int)($parts['weeks'] ?? 0);
+        $interval = new \DateInterval(sprintf(
+            'P%dDT%dH%dM%dS',
+            $days,
+            (int)($parts['hours'] ?? 0),
+            (int)($parts['minutes'] ?? 0),
+            (int)($parts['seconds'] ?? 0)
+        ));
+        $interval->y = (int)($parts['years'] ?? 0);
+        $interval->m = (int)($parts['months'] ?? 0);
+
+        return $interval;
     }
 
     // $EXPR TESTS
@@ -1764,6 +1985,63 @@ class QueryCheckTest extends TestCase
         $this->assertFalse($qc->test($varsEmpty));
     }
 
+    #[TestDox('$or short-circuit // empty list matches first branch, myList[0] is never accessed')]
+    public function testOrShortCircuitsWithSizeAndArrayAccess(): void
+    {
+        $qc = new QueryCheck([
+            '$or' => [
+                ['$expr' => ['$eq' => [['$size' => '$myList'], 0]]],
+                ['myList[0].amount' => 100],
+            ]
+        ]);
+
+        // first branch matches: myList[0] would throw UnknownVariableException
+        $this->assertTrue($qc->test(['myList' => []]));
+
+        // first branch does not match: second branch is evaluated
+        $this->assertTrue($qc->test(['myList' => [['amount' => 100]]]));
+        $this->assertFalse($qc->test(['myList' => [['amount' => 5]]]));
+    }
+
+    #[TestDox('$or short-circuit // later branches still run until one matches')]
+    public function testOrEvaluatesUntilFirstMatch(): void
+    {
+        $qc = new QueryCheck([
+            '$or' => [
+                ['a' => 1],
+                ['missing' => 1],
+            ]
+        ]);
+
+        $this->assertTrue($qc->test(['a' => 1]));
+
+        // first branch is false, so the second runs and the missing field throws
+        $this->expectException(UnknownVariableException::class);
+        $qc->test(['a' => 2]);
+    }
+
+    #[TestDox('$or short-circuit // operand evaluator is not called for skipped branches')]
+    public function testOrShortCircuitSkipsOperandEvaluator(): void
+    {
+        $seen = [];
+        $qc = new QueryCheck([
+            '$or' => [
+                ['a' => ['$var' => 'x']],
+                ['b' => ['$var' => 'y']],
+            ]
+        ]);
+        $qc->setOperandEvaluator(function ($operand, $data) use (&$seen, $qc) {
+            if (is_array($operand) && isset($operand['$var']) && is_string($operand['$var'])) {
+                $seen[] = $operand['$var'];
+                return $qc->getVariableValue($operand['$var'], $data);
+            }
+            return $operand;
+        });
+
+        $this->assertTrue($qc->test(['a' => 1, 'b' => 2, 'x' => 1, 'y' => 2]));
+        $this->assertSame(['x'], $seen);
+    }
+
     // $toLower / $toUpper AGGREGATION OPERATOR TESTS
 
     #[TestDox('$expr with $toLower // converts string to lowercase')]
@@ -2031,5 +2309,620 @@ class QueryCheckTest extends TestCase
         $this->expectException(SyntaxError::class);
         $this->expectExceptionMessage('$concat: all arguments must resolve to strings');
         $qc->test($vars);
+    }
+
+    // $literal AGGREGATION OPERATOR TESTS
+
+    #[TestDox('$expr with $literal // a string with $ is compared as a string, not a field reference')]
+    public function testExprAggLiteralDollarString(): void
+    {
+        // MongoDB's example: price == "$1"
+        $qc = new QueryCheck(['$expr' => ['$eq' => ['$price', ['$literal' => '$1']]]]);
+        $this->assertTrue($qc->test(['price' => '$1']));
+        $this->assertFalse($qc->test(['price' => '$2.50']));
+        $this->assertFalse($qc->test(['price' => '1']));
+    }
+
+    #[TestDox('$expr with $literal // without $literal, "$1" is a field reference')]
+    public function testExprWithoutLiteralIsFieldReference(): void
+    {
+        $qc = new QueryCheck(['$expr' => ['$eq' => ['$price', '$1']]]);
+        $qc->setThrowOnUnknownVariable(false);
+        $this->assertFalse($qc->test(['price' => '$1']));       // compares with the missing field "1"
+        $this->assertTrue($qc->test(['price' => 5, '1' => 5]));  // the field named "1"
+    }
+
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public static function literalValueProvider(): array
+    {
+        return [
+            'operator object' => [['$add' => [2, 3]]],
+            'nested $literal' => [['$literal' => 1]],
+            'list with field references' => [[1, '$x', ['$size' => '$y']]],
+            'null' => [null],
+            'number' => [1],
+            'empty array' => [[]],
+        ];
+    }
+
+    #[TestDox('$expr with $literal // returns the value unparsed')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('literalValueProvider')]
+    public function testExprAggLiteralReturnsValueUnparsed(mixed $value): void
+    {
+        // the field holds exactly the value $literal returns
+        $qc = new QueryCheck(['$expr' => ['$eq' => ['$v', ['$literal' => $value]]]]);
+        $qc->validate();
+        $this->assertTrue($qc->test(['v' => $value]));
+    }
+
+    #[TestDox('$expr with $literal // $literal: {$add: [2, 3]} is the object, not 5')]
+    public function testExprAggLiteralDoesNotEvaluate(): void
+    {
+        $qc = new QueryCheck(['$expr' => ['$eq' => [['$literal' => ['$add' => [2, 3]]], 5]]]);
+        $this->assertFalse($qc->test(['v' => 1]));
+    }
+
+    #[TestDox('$expr with $literal // contents are not checked, and not passed to the operand evaluator')]
+    public function testExprAggLiteralIsOpaque(): void
+    {
+        // an unknown operator inside $literal is just data
+        $qc = new QueryCheck(['$expr' => ['$eq' => ['$v', ['$literal' => ['$nope' => 1]]]]]);
+        $qc->validate();
+        $this->assertTrue($qc->test(['v' => ['$nope' => 1]]));
+
+        $seen = [];
+        $withEvaluator = new QueryCheck(['$expr' => ['$eq' => ['$v', ['$literal' => ['$var' => 'x']]]]]);
+        $withEvaluator->setOperandEvaluator(function (mixed $operand, array $data) use (&$seen): mixed {
+            $seen[] = $operand;
+            return is_array($operand) && array_key_first($operand) === '$var' ? 'resolved' : $operand;
+        });
+        $this->assertTrue($withEvaluator->test(['v' => ['$var' => 'x']]));
+        $this->assertNotContains(['$var' => 'x'], $seen);
+    }
+
+    #[TestDox('$expr with $literal // in $cond and $in')]
+    public function testExprAggLiteralInOtherOperators(): void
+    {
+        $qc = new QueryCheck(['$expr' => ['$in' => [['$literal' => '$admin'], '$roles']]]);
+        $this->assertTrue($qc->test(['roles' => ['user', '$admin']]));
+        $this->assertFalse($qc->test(['roles' => ['user', 'admin']]));
+
+        $qc = new QueryCheck(['$expr' => ['$eq' => [
+            ['$cond' => ['if' => ['$gt' => ['$n', 0]], 'then' => ['$literal' => '$positive'], 'else' => '$label']],
+            '$positive',
+        ]]]);
+        $this->assertTrue($qc->test(['n' => 1, 'label' => 'x', 'positive' => '$positive']));
+    }
+
+    // RELATIONAL OPERATOR TYPE TESTS ($gt / $gte / $lt / $lte)
+
+    /**
+     * Values that cannot be ordered against the operand must not match.
+     * PHP's native comparison would let all of these through.
+     *
+     * @return array<string, array{mixed, string, mixed}>
+     */
+    public static function unorderableProvider(): array
+    {
+        return [
+            'string "admin" $gte 18' => ['admin', '$gte', 18],
+            'string "admin" $gt 999999' => ['admin', '$gt', 999999],
+            'empty array $gte 18' => [[], '$gte', 18],
+            'list $gt 999' => [['x'], '$gt', 999],
+            'object $gte 18' => [['years' => 5], '$gte', 18],
+            'null $lt 5' => [null, '$lt', 5],
+            'null $lte 0' => [null, '$lte', 0],
+            'null $gte 0' => [null, '$gte', 0],
+            'false $lt 1' => [false, '$lt', 1],
+            'false $gte 0' => [false, '$gte', 0],
+            'true $gte 1' => [true, '$gte', 1],
+            'true $gt 0' => [true, '$gt', 0],
+            'number $gt string "admin"' => [137, '$gt', 'admin'],
+            'number $lt operand null' => [1, '$lt', null],
+            'number $lt operand true' => [0, '$lt', true],
+        ];
+    }
+
+    #[TestDox('relational operators // an array literal operand is a SyntaxError, inside $expr it does not match')]
+    public function testRelationalArrayOperand(): void
+    {
+        $expr = new QueryCheck(['$expr' => ['$lt' => ['$field', [1]]]]);
+        $this->assertFalse($expr->test(['field' => 0]));
+
+        $qc = new QueryCheck(['field' => ['$lt' => [1]]]);
+        $this->expectException(SyntaxError::class);
+        $this->expectExceptionMessage('field.$lt: $lt cannot compare with an array or object');
+        $qc->test(['field' => 0]);
+    }
+
+    #[TestDox('relational operators // unorderable value does not match')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('unorderableProvider')]
+    public function testRelationalUnorderableDoesNotMatch(mixed $value, string $operator, mixed $operand): void
+    {
+        $qc = new QueryCheck(['field' => [$operator => $operand]]);
+        $this->assertFalse($qc->test(['field' => $value]));
+    }
+
+    #[TestDox('relational operators // $expr: unorderable value does not match')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('unorderableProvider')]
+    public function testExprRelationalUnorderableDoesNotMatch(mixed $value, string $operator, mixed $operand): void
+    {
+        $qc = new QueryCheck(['$expr' => [$operator => ['$field', $operand]]]);
+        $this->assertFalse($qc->test(['field' => $value]));
+    }
+
+    /**
+     * @return array<string, array{mixed, string, mixed, bool}>
+     */
+    public static function orderableProvider(): array
+    {
+        return [
+            'int $gte int' => [30, '$gte', 18, true],
+            'int $gte int (false)' => [17, '$gte', 18, false],
+            'float $gt int' => [18.5, '$gt', 18, true],
+            'int $gte float' => [1, '$gte', 1.0, true],
+            'numeric string $gt int' => ['137', '$gt', 136, true],
+            'int $gt numeric string' => [137, '$gt', '136', true],
+            'int $gt numeric string (false)' => [137, '$gt', '138', false],
+            'string $gt string' => ['13:59', '$gt', '10:00', true],
+            'string $lt string' => ['13:59', '$lt', '12:00', false],
+        ];
+    }
+
+    #[TestDox('relational operators // orderable values still compare')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('orderableProvider')]
+    public function testRelationalOrderable(mixed $value, string $operator, mixed $operand, bool $expected): void
+    {
+        $qc = new QueryCheck(['field' => [$operator => $operand]]);
+        $this->assertSame($expected, $qc->test(['field' => $value]));
+
+        $expr = new QueryCheck(['$expr' => [$operator => ['$field', $operand]]]);
+        $this->assertSame($expected, $expr->test(['field' => $value]));
+    }
+
+    #[TestDox('relational operators // null intermediate does not pass a numeric bound')]
+    public function testRelationalNullIntermediateDoesNotMatch(): void
+    {
+        $qc = new QueryCheck(['profile.age' => ['$gte' => 0, '$lt' => 120]]);
+        $this->assertFalse($qc->test(['profile' => null]));
+    }
+
+    #[TestDox('[STRICT] relational operators // null value does not match and does not throw')]
+    public function testStrictRelationalNullDoesNotMatch(): void
+    {
+        $qc = new QueryCheck(['failedAttempts' => ['$lt' => 5]]);
+        $qc->setStrictMode(true);
+        $this->assertFalse($qc->test(['failedAttempts' => null]));
+    }
+
+    #[TestDox('[STRICT] relational operators // same unorderable type throws')]
+    public function testStrictRelationalArrayThrows(): void
+    {
+        // an array literal operand is a syntax error; two arrays can still
+        // meet inside $expr
+        $qc = new QueryCheck(['$expr' => ['$gte' => ['$list', ['$other']]]]);
+        $qc->setStrictMode(true);
+        $this->expectException(StrictTypeError::class);
+        $this->expectExceptionMessage('$gte: first operand is of type array, which cannot be ordered');
+        $qc->test(['list' => [1], 'other' => 1]);
+    }
+
+    /**
+     * Booleans order against booleans (false < true), null against null
+     * (equal), in both modes. Against other types they still do not match.
+     *
+     * @return array<string, array{array<mixed>, mixed, bool}>
+     */
+    public static function boolNullOrderingProvider(): array
+    {
+        return [
+            'true $gte true' => [['v' => ['$gte' => true]], true, true],
+            'false $lt true' => [['v' => ['$lt' => true]], false, true],
+            'true $gt false' => [['v' => ['$gt' => false]], true, true],
+            'true $gt true' => [['v' => ['$gt' => true]], true, false],
+            'null $gte null' => [['v' => ['$gte' => null]], null, true],
+            'null $lte null' => [['v' => ['$lte' => null]], null, true],
+            'null $gt null' => [['v' => ['$gt' => null]], null, false],
+            'null $lt null' => [['v' => ['$lt' => null]], null, false],
+            '$expr true $gte true' => [['$expr' => ['$gte' => ['$v', true]]], true, true],
+            '$expr null $lte null' => [['$expr' => ['$lte' => ['$v', null]]], null, true],
+        ];
+    }
+
+    /**
+     * @param array<mixed> $query
+     */
+    #[TestDox('relational operators // booleans and null order against their own type')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('boolNullOrderingProvider')]
+    public function testBoolNullOrdering(array $query, mixed $value, bool $expected): void
+    {
+        $qc = new QueryCheck($query);
+        $this->assertSame($expected, $qc->test(['v' => $value]));
+
+        $strict = new QueryCheck($query);
+        $strict->setStrictMode(true);
+        $this->assertSame($expected, $strict->test(['v' => $value]));
+    }
+
+    /**
+     * PHP compares an integer with a float by converting the integer, which
+     * makes 2^53 + 1 equal to 2^53.0. These compare exactly.
+     *
+     * @return array<string, array{array<mixed>, mixed, bool}>
+     */
+    public static function bigNumberProvider(): array
+    {
+        $big = 2 ** 53 + 1;          // 9007199254740993, not representable as float
+        $bigFloat = (float)(2 ** 53); // 9007199254740992.0
+        return [
+            '2^53+1 $eq 2^53.0' => [['v' => $bigFloat], $big, false],
+            '2^53+1 $ne 2^53.0' => [['v' => ['$ne' => $bigFloat]], $big, true],
+            '2^53+1 $gt 2^53.0' => [['v' => ['$gt' => $bigFloat]], $big, true],
+            '2^53+1 $lte 2^53.0' => [['v' => ['$lte' => $bigFloat]], $big, false],
+            '2^53.0 $lt 2^53+1' => [['v' => ['$lt' => $big]], $bigFloat, true],
+            '2^53 $eq 2^53.0' => [['v' => $bigFloat], 2 ** 53, true],
+            '2^53+1 $in [2^53.0]' => [['v' => ['$in' => [$bigFloat]]], $big, false],
+            'PHP_INT_MAX $lt INF' => [['v' => ['$lt' => INF]], PHP_INT_MAX, true],
+            'PHP_INT_MAX $lt 2^63.0' => [['v' => ['$lt' => 9.2233720368547758E18]], PHP_INT_MAX, true],
+            '$expr 2^53+1 $gt 2^53.0' => [['$expr' => ['$gt' => ['$v', $bigFloat]]], $big, true],
+            '$expr 2^53+1 $eq 2^53.0' => [['$expr' => ['$eq' => ['$v', $bigFloat]]], $big, false],
+        ];
+    }
+
+    /**
+     * @param array<mixed> $query
+     */
+    #[TestDox('numbers beyond 2^53 // integer vs float compared exactly')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('bigNumberProvider')]
+    public function testBigNumbersComparedExactly(array $query, mixed $value, bool $expected): void
+    {
+        $qc = new QueryCheck($query);
+        $this->assertSame($expected, $qc->test(['v' => $value]));
+
+        $strict = new QueryCheck($query);
+        $strict->setStrictMode(true);
+        $this->assertSame($expected, $strict->test(['v' => $value]));
+    }
+
+    // ARRAY FIELD TESTS ($eq / $ne / $in, like MongoDB)
+
+    /**
+     * @return array<string, array{array<mixed>, mixed, bool}>
+     */
+    public static function arrayFieldProvider(): array
+    {
+        return [
+            '$ne "banned" on ["banned"]' => [['role' => ['$ne' => 'banned']], ['banned'], false],
+            '$ne "banned" on ["banned", "admin"]' => [['role' => ['$ne' => 'banned']], ['banned', 'admin'], false],
+            '$ne "banned" on ["admin"]' => [['role' => ['$ne' => 'banned']], ['admin'], true],
+            '$ne "banned" on []' => [['role' => ['$ne' => 'banned']], [], true],
+            '$ne ["a", "b"] on ["a", "b"]' => [['role' => ['$ne' => ['a', 'b']]], ['a', 'b'], false],
+            '$ne 1 on [1.0]' => [['role' => ['$ne' => 1]], [1.0], false],
+            '$in ["admin"] on ["admin"]' => [['role' => ['$in' => ['admin']]], ['admin'], true],
+            '$in ["admin"] on ["user", "admin"]' => [['role' => ['$in' => ['admin']]], ['user', 'admin'], true],
+            '$in ["admin"] on ["user"]' => [['role' => ['$in' => ['admin']]], ['user'], false],
+            '$in ["admin"] on []' => [['role' => ['$in' => ['admin']]], [], false],
+            '$in [["a", "b"]] on ["a", "b"]' => [['role' => ['$in' => [['a', 'b']]]], ['a', 'b'], true],
+            '$not $in ["banned"] on ["banned", "admin"]' => [['role' => ['$not' => ['$in' => ['banned']]]], ['banned', 'admin'], false],
+            '$not $in ["banned"] on ["admin"]' => [['role' => ['$not' => ['$in' => ['banned']]]], ['admin'], true],
+            '$eq [1] on [1, 5] (not contained as element)' => [['role' => [1]], [1, 5], false],
+            '$eq "admin" on ["user", "admin"]' => [['role' => 'admin'], ['user', 'admin'], true],
+        ];
+    }
+
+    /**
+     * @param array<mixed> $query
+     */
+    #[TestDox('array field // $eq, $ne and $in match elements, $ne is the negation of $eq')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('arrayFieldProvider')]
+    public function testArrayField(array $query, mixed $value, bool $expected): void
+    {
+        $qc = new QueryCheck($query);
+        $this->assertSame($expected, $qc->test(['role' => $value]));
+
+        $strict = new QueryCheck($query);
+        $strict->setStrictMode(true);
+        $this->assertSame($expected, $strict->test(['role' => $value]));
+    }
+
+    #[TestDox('array field // $eq and $ne never both match')]
+    public function testArrayFieldEqNeExclusive(): void
+    {
+        $values = [['banned'], ['banned', 'admin'], ['admin'], [], [1, 2], [[1, 2]], ['1'], [1.0], [null], ['a', null]];
+        $operands = ['banned', 'admin', 1, '1', [1, 2], [], null];
+        foreach ($values as $value) {
+            foreach ($operands as $operand) {
+                $eq = (new QueryCheck(['v' => ['$eq' => $operand]]))->test(['v' => $value]);
+                $ne = (new QueryCheck(['v' => ['$ne' => $operand]]))->test(['v' => $value]);
+                $this->assertNotSame($eq, $ne, json_encode($value) . ' vs ' . json_encode($operand));
+            }
+        }
+    }
+
+    #[TestDox('[STRICT] $expr relational operators // type mismatch throws')]
+    public function testStrictExprRelationalThrows(): void
+    {
+        $qc = new QueryCheck(['$expr' => ['$gte' => ['$age', 18]]]);
+        $qc->setStrictMode(true);
+        $this->expectException(StrictTypeError::class);
+        $this->expectExceptionMessage('$gte: first operand is of type string while second operand is of type integer');
+        $qc->test(['age' => 'admin']);
+    }
+
+    #[TestDox('[STRICT] $expr relational operators // same type compares')]
+    public function testStrictExprRelationalSameType(): void
+    {
+        $qc = new QueryCheck(['$expr' => ['$gte' => ['$age', 18]]]);
+        $qc->setStrictMode(true);
+        $this->assertTrue($qc->test(['age' => 30]));
+        $this->assertFalse($qc->test(['age' => 17]));
+    }
+
+    // INTEGER VS FLOAT TESTS (one numeric type, like MongoDB)
+
+    /**
+     * @return array<string, array{array<mixed>, array<mixed>, bool}>
+     */
+    public static function intFloatProvider(): array
+    {
+        return [
+            '$gt float vs int' => [['v' => ['$gt' => 10]], ['v' => 12.1], true],
+            '$lt int vs float' => [['v' => ['$lt' => 12.5]], ['v' => 12], true],
+            '$gte int vs float (equal)' => [['v' => ['$gte' => 12.0]], ['v' => 12], true],
+            '$eq int vs float' => [['v' => 12], ['v' => 12.0], true],
+            '$eq float vs int (not equal)' => [['v' => 12], ['v' => 12.1], false],
+            '$ne int vs float' => [['v' => ['$ne' => 1]], ['v' => 1.0], false],
+            '$ne int vs float (not equal)' => [['v' => ['$ne' => 1]], ['v' => 1.5], true],
+            '$in int vs float' => [['v' => ['$in' => [12, 13]]], ['v' => 12.0], true],
+            '$eq list contains float' => [['v' => 12], ['v' => [11.0, 12.0]], true],
+            '$expr $gt float vs int' => [['$expr' => ['$gt' => ['$v', 10]]], ['v' => 12.1], true],
+            '$expr $gt $divide result' => [['$expr' => ['$gt' => [['$divide' => ['$v', 5]], 2]]], ['v' => 12], true],
+            '$expr $eq int vs float' => [['$expr' => ['$eq' => ['$v', 12]]], ['v' => 12.0], true],
+            '$expr $ne int vs float' => [['$expr' => ['$ne' => ['$v', 12]]], ['v' => 12.0], false],
+            '$expr $in int vs float' => [['$expr' => ['$in' => ['$v', [12]]]], ['v' => 12.0], true],
+        ];
+    }
+
+    /**
+     * @param array<mixed> $query
+     * @param array<mixed> $data
+     */
+    #[TestDox('integer vs float // compared as numbers')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('intFloatProvider')]
+    public function testIntFloatComparedAsNumbers(array $query, array $data, bool $expected): void
+    {
+        $qc = new QueryCheck($query);
+        $this->assertSame($expected, $qc->test($data));
+    }
+
+    /**
+     * @param array<mixed> $query
+     * @param array<mixed> $data
+     */
+    #[TestDox('[STRICT] integer vs float // compared as numbers, no StrictTypeError')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('intFloatProvider')]
+    public function testStrictIntFloatComparedAsNumbers(array $query, array $data, bool $expected): void
+    {
+        $qc = new QueryCheck($query);
+        $qc->setStrictMode(true);
+        $this->assertSame($expected, $qc->test($data));
+    }
+
+    // STRING VS STRING TESTS (compared as text, like MongoDB)
+
+    /**
+     * @return array<string, array{array<mixed>, array<mixed>, bool}>
+     */
+    public static function stringOrderingProvider(): array
+    {
+        return [
+            '"12.0" $gt "12"' => [['v' => ['$gt' => '12']], ['v' => '12.0'], true],
+            '"12.0" $lte "12"' => [['v' => ['$lte' => '12']], ['v' => '12.0'], false],
+            '"10" $gt "9" (text: "1" < "9")' => [['v' => ['$gt' => '9']], ['v' => '10'], false],
+            '"10" $lt "9"' => [['v' => ['$lt' => '9']], ['v' => '10'], true],
+            '"1e3" in range "1000".."1000"' => [['v' => ['$gte' => '1000', '$lte' => '1000']], ['v' => '1e3'], false],
+            '"1000" in range "1000".."1000"' => [['v' => ['$gte' => '1000', '$lte' => '1000']], ['v' => '1000'], true],
+            '"abc" $lt "abd"' => [['v' => ['$lt' => 'abd']], ['v' => 'abc'], true],
+            'zero-padded time' => [['v' => ['$gte' => '09:00', '$lt' => '18:00']], ['v' => '13:59'], true],
+            '$expr "10" $gt "9"' => [['$expr' => ['$gt' => ['$v', '9']]], ['v' => '10'], false],
+            '$expr "12.0" $gt "12"' => [['$expr' => ['$gt' => ['$v', '12']]], ['v' => '12.0'], true],
+        ];
+    }
+
+    /**
+     * @param array<mixed> $query
+     * @param array<mixed> $data
+     */
+    #[TestDox('string vs string // compared as text')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('stringOrderingProvider')]
+    public function testStringOrderingAsText(array $query, array $data, bool $expected): void
+    {
+        $qc = new QueryCheck($query);
+        $this->assertSame($expected, $qc->test($data));
+
+        $strict = new QueryCheck($query);
+        $strict->setStrictMode(true);
+        $this->assertSame($expected, $strict->test($data));
+    }
+
+    #[TestDox('numeric string vs number // still compared as numbers in non-strict mode')]
+    public function testNumericStringVsNumberStillNumeric(): void
+    {
+        $qc = new QueryCheck(['v' => ['$gt' => 9]]);
+        $this->assertTrue($qc->test(['v' => '10']));
+
+        $qc = new QueryCheck(['v' => ['$gt' => '9']]);
+        $this->assertTrue($qc->test(['v' => 10]));
+    }
+
+    // NAN TESTS (NaN equals NaN, like MongoDB)
+
+    /**
+     * @return array<string, array{array<mixed>, bool}>
+     */
+    public static function nanProvider(): array
+    {
+        return [
+            '$eq NaN' => [['v' => NAN], true],
+            '$ne NaN' => [['v' => ['$ne' => NAN]], false],
+            '$in [NaN]' => [['v' => ['$in' => [NAN]]], true],
+            '$gte NaN' => [['v' => ['$gte' => NAN]], true],
+            '$lte NaN' => [['v' => ['$lte' => NAN]], true],
+            '$gt NaN' => [['v' => ['$gt' => NAN]], false],
+            '$lt NaN' => [['v' => ['$lt' => NAN]], false],
+            '$gt 0' => [['v' => ['$gt' => 0]], false],
+            '$lt 0' => [['v' => ['$lt' => 0]], false],
+            '$eq 0' => [['v' => 0], false],
+            '$expr $eq NaN' => [['$expr' => ['$eq' => ['$v', NAN]]], true],
+            '$expr $ne NaN' => [['$expr' => ['$ne' => ['$v', NAN]]], false],
+            '$expr $gte NaN' => [['$expr' => ['$gte' => ['$v', NAN]]], true],
+        ];
+    }
+
+    /**
+     * @param array<mixed> $query
+     */
+    #[TestDox('NaN // equals NaN, matches no ordering against numbers')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('nanProvider')]
+    public function testNaN(array $query, bool $expected): void
+    {
+        $qc = new QueryCheck($query);
+        $this->assertSame($expected, $qc->test(['v' => NAN]));
+
+        $strict = new QueryCheck($query);
+        $strict->setStrictMode(true);
+        $this->assertSame($expected, $strict->test(['v' => NAN]));
+    }
+
+    #[TestDox('NaN // $eq with a string does not match and does not warn')]
+    public function testNaNVsStringDoesNotWarn(): void
+    {
+        set_error_handler(static function (int $errno, string $errstr): never {
+            throw new \ErrorException($errstr, 0, $errno);
+        });
+        try {
+            $qc = new QueryCheck(['v' => NAN]);
+            $this->assertFalse($qc->test(['v' => 'NAN']));
+
+            $qc = new QueryCheck(['v' => 'NAN']);
+            $this->assertFalse($qc->test(['v' => NAN]));
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    // STRICT MODE: NO MIXING STRINGS AND NUMBERS
+
+    /**
+     * @return array<string, array{array<mixed>, array<mixed>}>
+     */
+    public static function stringNumberEqualityProvider(): array
+    {
+        return [
+            '$in [137] on "137"' => [['v' => ['$in' => [137]]], ['v' => '137']],
+            '$in ["137"] on 137' => [['v' => ['$in' => ['137']]], ['v' => 137]],
+            '$eq 1 on list ["1"]' => [['v' => 1], ['v' => ['1']]],
+            '$expr $eq ["$v", 137] on "137"' => [['$expr' => ['$eq' => ['$v', 137]]], ['v' => '137']],
+            '$expr $in ["$v", [137]] on "137"' => [['$expr' => ['$in' => ['$v', [137]]]], ['v' => '137']],
+        ];
+    }
+
+    /**
+     * @param array<mixed> $query
+     * @param array<mixed> $data
+     */
+    #[TestDox('string vs number equality // matches in non-strict mode only')]
+    #[\PHPUnit\Framework\Attributes\DataProvider('stringNumberEqualityProvider')]
+    public function testStringNumberEqualityNonStrictOnly(array $query, array $data): void
+    {
+        $qc = new QueryCheck($query);
+        $this->assertTrue($qc->test($data));
+
+        $strict = new QueryCheck($query);
+        $strict->setStrictMode(true);
+        $this->assertFalse($strict->test($data));
+    }
+
+    #[TestDox('[STRICT] $in // mixed-type list still works')]
+    public function testStrictInMixedList(): void
+    {
+        $qc = new QueryCheck(['v' => ['$in' => ['a', 1, 2.0]]]);
+        $qc->setStrictMode(true);
+        $this->assertTrue($qc->test(['v' => 2]));
+        $this->assertTrue($qc->test(['v' => 'a']));
+        $this->assertFalse($qc->test(['v' => '1']));
+    }
+
+    #[TestDox('[STRICT] $eq // string vs number still throws')]
+    public function testStrictEqStringVsNumberThrows(): void
+    {
+        $qc = new QueryCheck(['v' => 12]);
+        $qc->setStrictMode(true);
+        $this->expectException(StrictTypeError::class);
+        $this->expectExceptionMessage('$eq: variable v is of type string while operand is of type integer');
+        $qc->test(['v' => '12']);
+    }
+
+    // COMPILED QUERY TESTS
+
+    #[TestDox('compiled query // reused across calls with different documents')]
+    public function testCompiledQueryIsReused(): void
+    {
+        $qc = new QueryCheck(['age' => ['$gte' => 18], 'country' => ['$in' => ['DE', 'AT']]]);
+        $this->assertTrue($qc->test(['age' => 30, 'country' => 'DE']));
+        $this->assertFalse($qc->test(['age' => 12, 'country' => 'DE']));
+        $this->assertFalse($qc->test(['age' => 30, 'country' => 'FR']));
+        $this->assertTrue($qc->test(['age' => 18, 'country' => 'AT']));
+    }
+
+    #[TestDox('compiled query // changing a setting after test() takes effect')]
+    public function testSettingChangeAfterTestRecompiles(): void
+    {
+        $qc = new QueryCheck(['myInt' => ['$gt' => '136']]);
+        $this->assertTrue($qc->test($this->vars));
+
+        $qc->setStrictMode(true);
+        $this->expectException(StrictTypeError::class);
+        $qc->test($this->vars);
+    }
+
+    #[TestDox('compiled query // setThrowOnUnknownVariable after test() takes effect')]
+    public function testThrowOnUnknownVariableAfterTestRecompiles(): void
+    {
+        $qc = new QueryCheck(['missing' => null]);
+        $qc->setThrowOnUnknownVariable(false);
+        $this->assertTrue($qc->test(['other' => 1]));
+
+        $qc->setThrowOnUnknownVariable(true);
+        $this->expectException(UnknownVariableException::class);
+        $qc->test(['other' => 1]);
+    }
+
+    #[TestDox('compiled query // syntax errors are reported for the whole query')]
+    public function testSyntaxErrorInUnreachedBranchThrows(): void
+    {
+        // The first condition is false, so the second one is never evaluated,
+        // but the query is still invalid.
+        $qc = new QueryCheck(['$and' => [['myInt' => 0], ['$unknown' => 1]]]);
+        $this->expectException(SyntaxError::class);
+        $this->expectExceptionMessage('Unsupported boolean operator: $unknown');
+        $qc->test($this->vars);
+    }
+
+    #[TestDox('compiled query // instance is freed without the cycle collector')]
+    public function testInstanceIsFreedWithoutCycleCollection(): void
+    {
+        $qc = new QueryCheck([
+            'myInt' => ['$gte' => 18],
+            '$expr' => ['$gt' => [['$add' => ['$myInt', 1]], 100]],
+        ]);
+        $this->assertTrue($qc->test($this->vars));
+
+        $ref = \WeakReference::create($qc);
+        unset($qc);
+
+        $this->assertNull($ref->get(), 'QueryCheck must not keep itself alive through a reference cycle');
     }
 }

@@ -164,7 +164,7 @@ $profile = [
     'email' => null,
 ];
 
-// Without undefinedEqualsNull - throws exception
+// Default: a missing field throws
 $query1 = new QueryCheck(['phone' => null]);
 echo "Query for undefined 'phone' field (default behavior): ";
 try {
@@ -173,10 +173,10 @@ try {
     echo "Exception: " . $e->getMessage() . "\n";
 }
 
-// With undefinedEqualsNull
+// With setThrowOnUnknownVariable(false), a missing field compares as null
 $query2 = new QueryCheck(['phone' => null]);
-$query2->setUndefinedEqualsNull(true);
-echo "Query for undefined 'phone' field (undefinedEqualsNull=true): ";
+$query2->setThrowOnUnknownVariable(false);
+echo "Query for undefined 'phone' field (throwOnUnknownVariable=false): ";
 echo $query2->test($profile) ? "Match\n" : "No match\n";
 
 // Null vs undefined
