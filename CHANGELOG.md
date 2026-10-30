@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1] - 2026-10-30
+
+### Changed
+
+* Faster compilation and evaluation: a field condition is checked once instead of twice, operands are only validated where they can be invalid, and a top-level field with several operators (`{age: {$gte: 18, $lt: 65}}`) is read once for all of them. Results are unchanged.
+* README: the differences from the JavaScript version now reflect its 2.0.0 release.
+
 ## [2.0.0] - 2026-10-30
 
 QueryCheck now compiles queries into closures, and no longer relies on PHP's type juggling to compare values.

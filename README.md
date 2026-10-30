@@ -327,10 +327,15 @@ Values of the same type, integer vs float, `NaN`, `null` vs `null`, booleans, `$
 
 ## Differences from the JavaScript Version
 
-* **Missing fields:** JavaScript has `undefined`, PHP does not. The JavaScript version never throws for a missing field; it stays `undefined`, which does not equal `null` unless `setUndefinedEqualsNull(true)` is set. The PHP version throws `UnknownVariableException` by default, and with `setThrowOnUnknownVariable(false)` a missing field is `null` (PHP cannot keep "missing" and `null` apart, so there is no `setUndefinedEqualsNull()`).
-* **Comparison rules:** the JavaScript version compares with JavaScript's operators, so mixed types can give different results there (`null >= 0` and `[] >= 0` are true in JavaScript). The PHP version uses the [Comparison Rules](#comparison-rules) above.
-* **Short-circuit evaluation:** the PHP version stops `$and` at the first branch that does not match and `$or` at the first branch that matches; the JavaScript version evaluates every branch of both.
-* **Array fields:** in the PHP version `$ne` is the negation of `$eq` and `$in` matches array elements, as in MongoDB.
+The JavaScript version 2.0.0 follows this version: the same operators, [Comparison Rules](#comparison-rules), strict mode, missing-field handling, compiled queries and syntax errors. What differs comes from the languages:
+
+* **Numbers:** JavaScript has numbers and BigInts instead of integers and floats; integers beyond 2^53 are compared exactly with BigInts there.
+* **Number as text:** `"137"` equals `137` in both, but each language writes numbers as text by its own rules (`1.0E+21` here, `1e+21` in JavaScript).
+* **`undefined`:** a field with the value `undefined` counts as missing in JavaScript.
+* **Dates:** JavaScript also compares `Date` objects (by time).
+* **Regular expressions:** JavaScript uses `RegExp` instead of PCRE (`x` is emulated, there is no backtrack limit).
+* **`$trim` with `chars`:** `a..z` is a range here (PHP's `trim()`), not in JavaScript.
+* **Own properties:** JavaScript only resolves own properties of the document.
 
 ## Advanced Features
 

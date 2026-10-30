@@ -378,6 +378,8 @@ final class Compiler
             // a plain top-level field like "age"
             $key = $segments[0][1];
 
+            $this->checkFieldExpression($expression);
+
             // the common shapes become a single closure that reads the field
             // and compares it
             $fused = $this->compileFusedField($variableName, $key, $expression);
@@ -385,9 +387,22 @@ final class Compiler
                 return $fused;
             }
 
-            $test = $this->compileFieldExpression($variableName, $expression);
-            return function (array $data) use ($key, $variableName, $test): bool {
-                return $test($data[$key] ?? $this->nullOrUnknown($data, $key, $variableName), $data);
+            $tests = $this->compileFieldTests($variableName, $expression);
+            if (count($tests) === 1) {
+                $test = $tests[0];
+                return function (array $data) use ($key, $variableName, $test): bool {
+                    return $test($data[$key] ?? $this->nullOrUnknown($data, $key, $variableName), $data);
+                };
+            }
+
+            // Every operator runs; the results are ANDed.
+            return function (array $data) use ($key, $variableName, $tests): bool {
+                $value = $data[$key] ?? $this->nullOrUnknown($data, $key, $variableName);
+                $result = true;
+                foreach ($tests as $test) {
+                    $result = $test($value, $data) && $result;
+                }
+                return $result;
             };
         }
 
@@ -403,7 +418,8 @@ final class Compiler
      * shape, which then takes the general path.
      *
      * Not used with an operand evaluator (the operand is only known per
-     * document) or for ordering in strict mode.
+     * document) or for ordering in strict mode. The caller has checked the
+     * expression with checkFieldExpression().
      *
      * @return (\Closure(array<mixed>): bool)|null
      */
@@ -412,8 +428,6 @@ final class Compiler
         if ($this->operandEvaluator !== null) {
             return null;
         }
-
-        $this->checkFieldExpression($expression);
 
         if (!is_array($expression) || array_is_list($expression)) {
             // {field: literal} is {field: {$eq: literal}}
@@ -653,7 +667,30 @@ final class Compiler
     private function compileFieldExpression(string $variableName, mixed $expression): \Closure
     {
         $this->checkFieldExpression($expression);
+        $tests = $this->compileFieldTests($variableName, $expression);
 
+        if (count($tests) === 1) {
+            return $tests[0];
+        }
+
+        // Every operator runs; the results are ANDed.
+        return static function (mixed $value, array $data) use ($tests): bool {
+            $result = true;
+            foreach ($tests as $test) {
+                $result = $test($value, $data) && $result;
+            }
+            return $result;
+        };
+    }
+
+    /**
+     * One closure per operator of a field condition that was checked with
+     * checkFieldExpression().
+     *
+     * @return non-empty-list<\Closure(mixed, array<mixed>): bool>
+     */
+    private function compileFieldTests(string $variableName, mixed $expression): array
+    {
         if (!is_array($expression) || array_is_list($expression)) {
             // array (list), null, number, string, bool: wrap it
             $expression = ['$eq' => $expression];
@@ -673,18 +710,7 @@ final class Compiler
             }
         }
 
-        if (count($tests) === 1) {
-            return $tests[0];
-        }
-
-        // Every operator runs, as before; the results are ANDed.
-        return static function (mixed $value, array $data) use ($tests): bool {
-            $result = true;
-            foreach ($tests as $test) {
-                $result = $test($value, $data) && $result;
-            }
-            return $result;
-        };
+        return $tests;
     }
 
     /**
@@ -708,7 +734,7 @@ final class Compiler
         $first = array_key_first($expression);
 
         if (isset(self::QUERY_OPERATORS[$first])) {
-            if (array_key_exists('$options', $expression) && !array_key_exists('$regex', $expression)) {
+            if ((count($expression) > 1 || $first === '$options') && array_key_exists('$options', $expression) && !array_key_exists('$regex', $expression)) {
                 throw new SyntaxError('$options requires $regex');
             }
             return; // other keys are checked by compileOperator()
@@ -771,7 +797,10 @@ final class Compiler
             return $this->compileDynamicOperator($variableName, $operator, $operand, $expression);
         }
 
-        $this->validateOperand($operator, $operand);
+        if ($operator === '$in' || $operator === '$not' || is_array($operand)) {
+            // the only cases validateOperand() can reject
+            $this->validateOperand($operator, $operand);
+        }
 
         // The operand is a literal, so the operator can be specialized on it.
         return match ($operator) {
